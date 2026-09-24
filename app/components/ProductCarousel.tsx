@@ -27,6 +27,9 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   const [pos, setPos] = useState(n);
   const [animate, setAnimate] = useState(true);
   const busy = useRef(false);
+  const viewport = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; moved: boolean } | null>(null);
+  const lastWheel = useRef(0);
 
   const go = useCallback((dir: 1 | -1) => {
     if (busy.current) return;
@@ -51,6 +54,41 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
     }
   }, [animate]);
 
+  // Sideways trackpad / shift+wheel scroll moves one card per gesture.
+  // Native listener: React's wheel handler is passive and could not stop the browser's back-swipe.
+  useEffect(() => {
+    const el = viewport.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+      if (Math.abs(dx) <= Math.abs(e.deltaY) && !(e.shiftKey && !e.deltaX)) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (Math.abs(dx) < 8 || now - lastWheel.current < 700) return;
+      lastWheel.current = now;
+      go(dx > 0 ? 1 : -1);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [go]);
+
+  // Swipe (touch) or drag (mouse) sideways.
+  const onPointerDown = (e: React.PointerEvent) => {
+    drag.current = { x: e.clientX, moved: false };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (d && Math.abs(e.clientX - d.x) > 6) d.moved = true;
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+    // Keep `moved` until the click that follows the release has been swallowed.
+    setTimeout(() => { drag.current = null; }, 0);
+  };
+
   const offset = (pos + CENTER) * STEP + CARD / 2;
 
   return (
@@ -74,7 +112,20 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
         </button>
       </div>
 
-      <div className="h-[465px] w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_12.5%,#000_87.5%,transparent)]">
+      <div
+        ref={viewport}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { drag.current = null; }}
+        onDragStart={(e) => e.preventDefault()}
+        onClickCapture={(e) => {
+          if (drag.current?.moved) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        className="h-[465px] w-full touch-pan-y overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_12.5%,#000_87.5%,transparent)]">
         <div
           onTransitionEnd={settle}
           className={`relative left-1/2 flex items-start ${animate ? "transition-transform duration-500 ease-out" : ""}`}
