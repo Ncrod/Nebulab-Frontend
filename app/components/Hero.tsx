@@ -36,7 +36,7 @@ export default function Hero() {
           alt=""
           width={751}
           height={932}
-          className="absolute left-[1024px] top-[21px] h-[932px] w-[750.778px] max-w-none object-cover"
+          className="absolute left-[1024px] notebook:max-desktop:left-[1044px] top-[21px] h-[932px] w-[750.778px] max-w-none object-cover"
         />
       </div>
 
