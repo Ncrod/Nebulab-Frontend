@@ -129,7 +129,7 @@ export default function Offer() {
                   alt=""
                   width={1070}
                   height={535}
-                  className="pointer-events-none -mb-[61px] h-auto w-[calc(100%-50px)] max-w-[476px] self-center desktop:absolute desktop:left-[calc(50%+0.24px)] desktop:top-[151px] desktop:mb-0 desktop:h-[238px] desktop:w-[476px] desktop:-translate-x-1/2 desktop:self-auto desktop:object-cover"
+                  className="pointer-events-none -mb-[61px] max-tablet:-mb-[20px] h-auto w-[calc(100%-50px)] max-w-[476px] self-center desktop:absolute desktop:left-[calc(50%+0.24px)] desktop:top-[151px] desktop:mb-0 desktop:h-[238px] desktop:w-[476px] desktop:-translate-x-1/2 desktop:self-auto desktop:object-cover"
                 />
               </div>
             </div>

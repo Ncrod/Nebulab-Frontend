@@ -46,7 +46,7 @@ export default function Benefits() {
   return (
     <section className="flex w-full flex-col items-center justify-center px-section pb-[232px] pt-[169px]">
       <div className="flex w-full max-w-[1271px] flex-col items-center gap-[50px] notebook:flex-row notebook:items-start notebook:gap-[83px]">
-        <h2 className="w-full min-w-0 flex-none self-center text-center max-notebook:max-w-[615px] notebook:text-left notebook:sticky notebook:top-[120px] notebook:w-auto notebook:flex-[614] notebook:self-start font-display text-[64px] font-medium leading-[1.045] text-white max-desktop:text-[44px] max-tablet:text-[36px] notebook:max-desktop:max-w-[470px]">
+        <h2 className="w-full min-w-0 flex-none self-center text-center max-notebook:max-w-[615px] max-tablet:max-w-[480px] notebook:text-left notebook:sticky notebook:top-[120px] notebook:w-auto notebook:flex-[614] notebook:self-start font-display text-[64px] font-medium leading-[1.045] text-white max-desktop:text-[44px] max-tablet:text-[36px] notebook:max-desktop:max-w-[470px]">
           Buying technology should{" "}
           <span className="bg-gradient-to-r from-white to-[#666] bg-clip-text text-transparent">
             feel this simple
@@ -55,7 +55,7 @@ export default function Benefits() {
 
         <ul className="flex w-full min-w-0 flex-none notebook:w-auto notebook:flex-[574] flex-col items-start gap-[71px] max-desktop:max-w-[520px]">
           {benefits.map(({ title, description, icon }) => (
-            <li key={title} className="flex w-full items-center gap-[42px]">
+            <li key={title} className="flex w-full items-center gap-[42px] max-tablet:gap-[20px]">
               <IconBadge icon={icon} />
               <div className="flex min-w-px flex-1 flex-col items-start leading-[normal]">
                 <p className="w-full font-display text-[40px] font-normal text-white max-desktop:text-[30px] max-tablet:text-[25px]">{title}</p>

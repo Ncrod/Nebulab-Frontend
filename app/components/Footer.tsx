@@ -12,7 +12,14 @@ export default function Footer() {
     <footer className="flex w-full py-[40px] notebook:h-[110px] notebook:py-0 items-center justify-center border-t px-section border-white/20 bg-[#0f0f0f]">
       <div className="flex w-full max-w-[400px] flex-col items-center gap-[15px] notebook:max-w-[1303px] notebook:flex-row notebook:justify-between notebook:gap-[24px]">
         <Link href="/" aria-label="Nebulab" className="order-last notebook:order-none">
-          <Image src="/svg/nebulab-logo.svg" alt="Nebulab" width={229} height={53} />
+          <Image src="/svg/nebulab-logo.svg" alt="Nebulab" width={229} height={53} className="max-tablet:hidden" />
+          <Image
+            src="/svg/logonofilter.svg"
+            alt="Nebulab"
+            width={535}
+            height={124}
+            className="h-auto w-[229px] tablet:hidden"
+          />
         </Link>
 
         <p className="whitespace-nowrap text-center font-sans text-[17px] leading-[27px] text-[#c9c9c9]">
