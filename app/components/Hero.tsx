@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import ArrowIcon from "./ArrowIcon";
+import BlackHole from "./BlackHole";
 
 export default function Hero() {
   return (
-    <section className="relative flex min-h-[1230px] flex-col items-center gap-[10px] px-[10px] pb-[523px] pt-[152px]">
+    <section className="relative flex min-h-[1130px] overflow-x-clip flex-col items-center gap-[10px] px-[10px] pb-[423px] pt-[152px]">
       {/* Decorative background, laid out on the 1920px design canvas */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 w-[1920px] -translate-x-1/2">
         <div className="absolute left-[-207px] top-[-196px] flex h-[465.722px] w-[540.862px] items-center justify-center">
@@ -12,13 +13,17 @@ export default function Hero() {
             <div className="h-[129.198px] w-[587.399px] rounded-full bg-white blur-[211.45px]" />
           </div>
         </div>
-        <Image
-          src="/images/hero-iphone.png"
-          alt=""
-          width={1682}
-          height={1256}
-          priority
-          className="absolute left-[492px] top-[-142px] h-[1256px] w-[1682px] max-w-none object-cover"
+        <BlackHole
+          distance={19}
+          diskOuter={12}
+          diskThickness={0.18}
+          grain={0.9}
+          glow={0.5}
+          brightness={1.6}
+          fov={52.97}
+          resolution={0.55}
+          focus={[0.4694, 0.518]}
+          className="absolute left-[152px] top-[-400px] h-[1630px] w-[2768px] [mask-image:linear-gradient(70deg,transparent_488px,#000_1287px)]"
         />
         <Image
           src="/images/cel.webp"

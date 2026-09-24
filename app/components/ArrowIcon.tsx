@@ -2,15 +2,16 @@
  * Circular arrow icon for buttons. Put `group` on the parent button/link:
  * on hover the arrow rotates 35deg clockwise to point straight right.
  */
-export default function ArrowIcon() {
+export default function ArrowIcon({ size = 44 }: { size?: number }) {
   return (
     <span
       aria-hidden="true"
-      className="flex size-[44px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-background"
+      style={{ width: size, height: size }}
+      className="flex shrink-0 items-center justify-center rounded-full border border-white/30 bg-background"
     >
       <svg
-        width="44"
-        height="44"
+        width={size}
+        height={size}
         viewBox="0 0 44 44"
         fill="none"
         className="origin-center transition-transform duration-300 ease-out group-hover:rotate-[35deg]"
