@@ -117,7 +117,7 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardTall} relative flex-1 gap-[30px] desktop:min-h-[362px] px-[30px] py-[34px]`}>
+              <div className={`${cardBase} ${cardTall} relative order-first flex-1 gap-[30px] notebook:order-none desktop:min-h-[362px] px-[30px] py-[34px]`}>
                 <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-chart.svg" gap="gap-[9px]">Upgrade Your Setup</CardTitle>
                   <CardText>

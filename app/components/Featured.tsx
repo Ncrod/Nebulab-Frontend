@@ -69,12 +69,12 @@ export default function Featured() {
         alt=""
         width={870}
         height={486}
-        className="relative h-[486px] w-[870px] shrink-0 object-cover tablet:max-notebook:h-auto tablet:max-notebook:w-full tablet:max-notebook:max-w-[770px]"
+        className="relative h-[486px] w-[870px] shrink-0 object-cover max-notebook:h-auto max-notebook:w-full max-notebook:max-w-[770px]"
       />
 
-      <div className="relative mt-[117px] flex w-full flex-col items-center gap-[262px] tablet:max-notebook:gap-[160px]">
+      <div className="relative mt-[117px] flex w-full flex-col items-center gap-[262px] max-notebook:gap-[160px]">
         <div className="flex w-full justify-center px-section">
-        <h2 className="w-[1171px] max-w-full text-center font-display text-[80px] font-medium leading-[1.045] text-white notebook:max-desktop:text-[70px] tablet:max-notebook:text-[47px]">
+        <h2 className="w-[1171px] max-w-full text-center font-display text-[80px] font-medium leading-[1.045] text-white notebook:max-desktop:text-[70px] max-notebook:text-[47px]">
           Selected to{" "}
           <span className="bg-gradient-to-r from-white to-[#666] bg-clip-text text-transparent">
             upgrade your day

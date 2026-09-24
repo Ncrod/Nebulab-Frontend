@@ -37,22 +37,22 @@ export default function Hero() {
         />
       </div>
 
-      <div className="relative z-10 flex w-[1470px] max-w-full flex-col items-start tablet:max-notebook:items-center">
-        <div className="flex w-[826px] max-w-full flex-col items-start gap-[39px] tablet:max-notebook:items-center">
-          <div className="flex w-full flex-col items-start gap-[21px] tablet:max-notebook:items-center tablet:max-notebook:text-center">
-            <h1 className="w-full bg-[linear-gradient(179.99deg,#fff_6.33%,rgba(255,255,255,0)_99.97%)] bg-clip-text font-display text-[90px] font-medium leading-[normal] text-transparent tablet:max-desktop:text-[70px]">
+      <div className="relative z-10 flex w-[1470px] max-w-full flex-col items-start max-notebook:items-center">
+        <div className="flex w-[826px] max-w-full flex-col items-start gap-[39px] max-notebook:items-center">
+          <div className="flex w-full flex-col items-start gap-[21px] max-notebook:items-center max-notebook:text-center">
+            <h1 className="w-full bg-[linear-gradient(179.99deg,#fff_6.33%,rgba(255,255,255,0)_99.97%)] bg-clip-text font-display text-[90px] font-medium leading-[normal] text-transparent max-desktop:text-[70px]">
               Your Destination for Everything Apple
             </h1>
-            <p className="w-[687px] max-w-full font-sans text-[30px] leading-[normal] text-white/75 tablet:max-desktop:text-[25px] notebook:max-desktop:max-w-[660px]">
+            <p className="w-[687px] max-w-full font-sans text-[30px] leading-[normal] text-white/75 max-desktop:text-[25px] notebook:max-desktop:max-w-[660px]">
               Explore genuine Apple gear and top-tier accessories engineered to
               power your day seamlessly.
             </p>
           </div>
 
-          <div className="flex items-center gap-[25px] tablet:max-notebook:w-[604px] tablet:max-notebook:max-w-full">
+          <div className="flex items-center gap-[25px] max-notebook:w-[604px] max-notebook:max-w-full">
             <Link
               href="/contact"
-              className="flex items-center overflow-clip rounded-[200px] border-2 border-white/60 tablet:max-notebook:w-[297px] tablet:max-notebook:justify-center px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-white whitespace-nowrap"
+              className="flex items-center overflow-clip rounded-[200px] border-2 border-white/60 max-notebook:w-[297px] max-notebook:justify-center px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-white whitespace-nowrap"
             >
               Contact Us
             </Link>

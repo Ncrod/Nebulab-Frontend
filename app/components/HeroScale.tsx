@@ -9,7 +9,7 @@ import { useEffect } from "react";
  * window shrinks. From notebook up the backdrop ignores it.
  *
  * `--m` is the same idea for the Featured section: the macbook image is 870px
- * wide, capped at 770px on tablet (768-1139px), and the arc behind it scales
+ * wide, capped at 770px below notebook (tablet and mobile), and the arc behind it scales
  * with it (--m = macbook width / 870).
  */
 export default function HeroScale() {
@@ -18,7 +18,7 @@ export default function HeroScale() {
     const update = () => {
       const w = root.clientWidth;
       root.style.setProperty("--k", String(w < 1140 ? w / 1139 : 1));
-      root.style.setProperty("--m", String(w >= 768 && w < 1140 ? Math.min(770, w) / 870 : 1));
+      root.style.setProperty("--m", String(w < 1140 ? Math.min(770, w) / 870 : 1));
     };
     update();
     window.addEventListener("resize", update);

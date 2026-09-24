@@ -20,7 +20,7 @@ function Group({ duplicate = false }: { duplicate?: boolean }) {
   return (
     <ul
       aria-hidden={duplicate || undefined}
-      className={`items-center gap-[44px] font-display text-[30px] font-normal leading-[normal] whitespace-nowrap text-white/75 tablet:max-notebook:text-[22px] max-[957px]:flex max-[957px]:shrink-0 max-[957px]:pr-[44px] ${
+      className={`items-center gap-[44px] font-display text-[30px] font-normal leading-[normal] whitespace-nowrap text-white/75 max-notebook:text-[22px] max-[957px]:flex max-[957px]:shrink-0 max-[957px]:pr-[44px] ${
         duplicate ? "hidden" : "flex"
       }`}
     >

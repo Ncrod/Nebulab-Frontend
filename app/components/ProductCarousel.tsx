@@ -10,7 +10,7 @@ const STEP = CARD + GAP;
 const CENTER = 2;
 
 const navButton =
-  "flex size-[68px] tablet:max-notebook:size-[56px] cursor-pointer items-center justify-center rounded-full border transition-colors duration-300";
+  "flex size-[68px] max-notebook:size-[56px] cursor-pointer items-center justify-center rounded-full border transition-colors duration-300";
 
 function NavArrow({ className = "" }: { className?: string }) {
   return (
@@ -55,7 +55,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
 
   return (
     <div className="relative w-full">
-      <div className="absolute bottom-[510px] left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-[38px] tablet:max-notebook:gap-[30px]">
+      <div className="absolute bottom-[510px] left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-[38px] max-notebook:gap-[30px]">
         <button
           type="button"
           aria-label="Previous"
