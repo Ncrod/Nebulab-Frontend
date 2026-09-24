@@ -17,7 +17,7 @@ const fadeText =
 const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 const line =
-  "absolute left-1/2 h-[4px] w-[36px] -translate-x-1/2 rounded-full bg-white transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
+  "absolute left-1/2 h-[4px] w-[36px] max-tablet:h-[3px] max-tablet:w-[28px] -translate-x-1/2 rounded-full bg-white transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -38,9 +38,9 @@ export default function Navbar() {
   return (
     // Below notebook the header keeps the bar's height in the layout, and one
     // container (bar + dropdown) sits on top of it and grows when opened.
-    <header className="relative z-30 w-full max-notebook:h-[110px]">
+    <header className="relative z-30 w-full max-notebook:h-[110px] max-tablet:h-[70px]">
       <div className="max-notebook:absolute max-notebook:inset-x-0 max-notebook:top-0 max-notebook:border-b max-notebook:border-[#3f3f3f] max-notebook:bg-[#0f0f0f]">
-      <div className="flex w-full justify-center px-5 py-[28px] tablet:px-[10%]">
+      <div className="flex w-full justify-center px-5 py-[28px] max-tablet:py-[16px] tablet:px-[10%]">
         <nav className="flex w-full max-w-[1654px] items-center justify-between">
           <Link href="/" aria-label="Nebulab" onClick={() => setOpen(false)}>
             <Image
@@ -49,6 +49,7 @@ export default function Navbar() {
               width={229}
               height={53}
               priority
+              className="max-tablet:h-auto max-tablet:w-[160px]"
             />
           </Link>
 
@@ -85,13 +86,13 @@ export default function Navbar() {
             aria-expanded={open}
             aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
-            className="relative h-[41px] w-[49px] shrink-0 cursor-pointer notebook:hidden"
+            className="relative h-[41px] w-[49px] max-tablet:h-[30px] max-tablet:w-[38px] shrink-0 cursor-pointer notebook:hidden"
           >
             <span
-              className={`${line} top-[12px] ${open ? "translate-y-[6.5px] rotate-45" : ""}`}
+              className={`${line} top-[12px] max-tablet:top-[9px] ${open ? "translate-y-[6.5px] rotate-45 max-tablet:translate-y-[5px]" : ""}`}
             />
             <span
-              className={`${line} top-[25px] ${open ? "-translate-y-[6.5px] -rotate-45" : ""}`}
+              className={`${line} top-[25px] max-tablet:top-[19px] ${open ? "-translate-y-[6.5px] -rotate-45 max-tablet:-translate-y-[5px]" : ""}`}
             />
           </button>
         </nav>
@@ -118,7 +119,7 @@ export default function Navbar() {
             }`}
             style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
-            <ul className="flex flex-col items-center gap-[28px] font-display text-[24px] font-medium">
+            <ul className="flex flex-col items-center gap-[28px] font-display text-[24px] font-medium max-tablet:text-[20px]">
               {links.map(({ label, href }) => (
                 <li key={label}>
                   <Link
@@ -136,7 +137,7 @@ export default function Navbar() {
             <div className="flex items-center gap-[19px]">
               <Link
                 href="/sign-in"
-                className={`font-display text-[24px] font-normal ${fadeText}`}
+                className={`font-display text-[24px] font-normal max-tablet:text-[20px] ${fadeText}`}
                 tabIndex={open ? undefined : -1}
                 onClick={() => setOpen(false)}
               >
@@ -144,7 +145,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/sign-up"
-                className="flex items-center rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[24px] font-medium leading-[24.32px] tracking-[0.304px] text-background"
+                className="flex items-center rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[24px] font-medium max-tablet:text-[20px] leading-[24.32px] tracking-[0.304px] text-background"
                 tabIndex={open ? undefined : -1}
                 onClick={() => setOpen(false)}
               >
