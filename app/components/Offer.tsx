@@ -2,7 +2,7 @@ import Image from "next/image";
 
 const cardShadow =
   "shadow-[232px_317px_110px_0px_rgba(0,0,0,0.01),149px_203px_101px_0px_rgba(0,0,0,0.05),84px_114px_85px_0px_rgba(0,0,0,0.16),37px_51px_63px_0px_rgba(0,0,0,0.28),9px_13px_35px_0px_rgba(0,0,0,0.32)]";
-const cardBase = `flex w-full flex-col items-start overflow-clip rounded-[16px] border-[1.5px] border-[#2d2d2d] ${cardShadow}`;
+const cardBase = `flex w-full flex-col items-start overflow-clip rounded-[16px] border-[1.5px] border-[#2d2d2d] max-notebook:shadow-none ${cardShadow}`;
 const cardTall =
   "bg-[radial-gradient(ellipse_500px_330px_at_16px_0,#232323_0,#181818_50%,#0d0d0d_100%)]";
 const cardShort =
