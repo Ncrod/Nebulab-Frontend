@@ -11,6 +11,15 @@ const links = [
   { label: "About us", href: "/about" },
 ];
 
+// Tablet and mobile dropdown: the desktop SideNav (cart, account) is not shown there.
+const menuLinks = [
+  { label: "Home", href: "/" },
+  { label: "Products", href: "/products" },
+  { label: "Your bag", href: "/cart" },
+  { label: "About us", href: "/about" },
+  { label: "Account", href: "/account" },
+];
+
 const fadeText =
   "bg-gradient-to-b from-white to-white/0 to-[115.97%] bg-clip-text text-transparent";
 
@@ -39,7 +48,7 @@ export default function Navbar() {
     // Below notebook the header keeps the bar's height in the layout, and one
     // container (bar + dropdown) sits on top of it and grows when opened.
     <header className="relative z-30 w-full max-notebook:h-[110px] max-tablet:h-[70px]">
-      <div className="max-notebook:absolute max-notebook:inset-x-0 max-notebook:top-0 max-notebook:border-b max-notebook:border-[#3f3f3f] max-notebook:bg-[#0f0f0f]">
+      <div className="max-notebook:fixed max-notebook:inset-x-0 max-notebook:top-0 max-notebook:max-h-dvh max-notebook:overflow-y-auto max-notebook:border-b max-notebook:border-[#3f3f3f] max-notebook:bg-[#0f0f0f]">
       <div className="flex w-full justify-center px-5 py-[28px] max-tablet:py-[16px] tablet:px-[10%]">
         <nav className="flex w-full max-w-[1654px] items-center justify-between">
           <Link href="/" aria-label="Nebulab" onClick={() => setOpen(false)}>
@@ -49,7 +58,15 @@ export default function Navbar() {
               width={229}
               height={53}
               priority
-              className="max-tablet:h-auto max-tablet:w-[160px]"
+              className="max-tablet:hidden"
+            />
+            <Image
+              src="/svg/logonofilter.svg"
+              alt="Nebulab"
+              width={535}
+              height={124}
+              loading="eager"
+              className="h-auto w-[160px] tablet:hidden"
             />
           </Link>
 
@@ -114,13 +131,13 @@ export default function Navbar() {
       >
         <div className="overflow-hidden">
           <div
-            className={`flex flex-col items-center gap-[40px] px-5 py-[40px] text-center transition-[opacity,transform] duration-500 tablet:px-[10%] ${
+            className={`flex flex-col items-center gap-[24px] px-5 py-[24px] text-center transition-[opacity,transform] duration-500 tablet:px-[10%] ${
               open ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
             }`}
             style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
-            <ul className="flex flex-col items-center gap-[28px] font-display text-[24px] font-medium max-tablet:text-[20px]">
-              {links.map(({ label, href }) => (
+            <ul className="flex flex-col items-center gap-[14px] font-display text-[24px] font-medium max-tablet:text-[20px]">
+              {menuLinks.map(({ label, href }) => (
                 <li key={label}>
                   <Link
                     href={href}
