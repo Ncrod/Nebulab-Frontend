@@ -27,11 +27,11 @@ function CardText({ children }: { children: string }) {
 
 export default function Offer() {
   return (
-    <section className="relative w-full overflow-x-clip pt-[68px] notebook:h-[1249px] notebook:pt-0">
+    <section className="relative w-full overflow-x-clip pt-[68px] max-tablet:pt-[34px] notebook:h-[1249px] notebook:pt-0">
       {/* Light spilling over the raised centre of the panel */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-[calc(50%-157.5px)] top-[4px] h-[165px] w-[332px]"
+        className="pointer-events-none absolute left-[calc(50%-157.5px)] top-[4px] h-[165px] w-[332px] max-tablet:origin-top max-tablet:scale-[0.6]"
       >
         <div className="absolute inset-[-266.97%_-132.68%_-260.91%_-132.68%]">
           <Image src="/svg/offer-glow.svg" alt="" width={1213} height={1036} className="block size-full max-w-none" />
@@ -51,7 +51,7 @@ export default function Offer() {
               <div className="absolute left-[calc(50%+0.5px)] top-[-1px] h-px w-[100px] -translate-x-1/2 bg-gradient-to-r from-white/0 via-white to-white/0" />
             </div>
             <h2
-              className="min-w-full bg-clip-text text-center font-display text-[44px] font-normal leading-[1.2] text-transparent"
+              className="min-w-full bg-clip-text text-center font-display text-[44px] max-tablet:text-[40px] font-normal leading-[1.2] text-transparent"
               style={{ backgroundImage: "linear-gradient(-66.55deg, #999 14.907%, #fff 64.578%)" }}
             >
               Everything you need, all in one place
@@ -63,7 +63,7 @@ export default function Offer() {
 
           <div className="flex w-full max-w-[550px] flex-col items-stretch justify-center gap-[22px] notebook:max-w-none notebook:flex-row">
             <div className="flex w-full min-w-0 flex-none flex-col items-start gap-[22px] notebook:w-auto notebook:flex-[544.52]">
-              <div className={`${cardBase} ${cardTall} max-desktop:flex-1 px-[29px] py-[35px]`}>
+              <div className={`${cardBase} ${cardTall} max-desktop:flex-1 px-[29px] py-[35px] max-tablet:px-[20px] max-tablet:py-[20px]`}>
                 <div className="flex w-full flex-col items-center gap-[26px]">
                   <div className="flex w-full flex-col items-start gap-[13px]">
                     <CardTitle icon="/svg/icon-apple.svg" gap="gap-[9px]">Apple Products</CardTitle>
@@ -88,7 +88,7 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardShort} flex-1 px-[31px] py-[35px]`}>
+              <div className={`${cardBase} ${cardShort} flex-1 px-[31px] py-[35px] max-tablet:px-[20px] max-tablet:py-[20px]`}>
                 <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-headphones.svg" gap="gap-[8px]">Accessories</CardTitle>
                   <CardText>
@@ -99,7 +99,7 @@ export default function Offer() {
             </div>
 
             <div className="flex w-full min-w-0 flex-none flex-col items-start gap-[22px] notebook:w-auto notebook:flex-[526]">
-              <div className={`${cardBase} ${cardShort} max-desktop:flex-1 px-[30px] py-[35px]`}>
+              <div className={`${cardBase} ${cardShort} max-desktop:flex-1 px-[30px] py-[35px] max-tablet:px-[20px] max-tablet:py-[20px]`}>
                 <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-sparkles.svg" gap="gap-[6px]">For Your Everyday</CardTitle>
                   <CardText>
@@ -108,7 +108,7 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardShort} max-desktop:flex-1 px-[30px] py-[34px]`}>
+              <div className={`${cardBase} ${cardShort} max-desktop:flex-1 px-[30px] py-[34px] max-tablet:px-[20px] max-tablet:py-[20px]`}>
                 <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-diamond.svg" gap="gap-[8px]">Premium Selection</CardTitle>
                   <CardText>
@@ -117,7 +117,7 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardTall} relative order-first flex-1 gap-[30px] notebook:order-none desktop:min-h-[362px] px-[30px] py-[34px]`}>
+              <div className={`${cardBase} ${cardTall} relative order-first flex-1 gap-[30px] notebook:order-none desktop:min-h-[362px] px-[30px] py-[34px] max-tablet:px-[20px] max-tablet:py-[20px]`}>
                 <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-chart.svg" gap="gap-[9px]">Upgrade Your Setup</CardTitle>
                   <CardText>
@@ -139,7 +139,7 @@ export default function Offer() {
       </div>
 
       {/* Raised, curved top edge of the panel */}
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[69px] w-full max-w-[1490px] -translate-x-1/2">
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[69px] w-full max-w-[1490px] -translate-x-1/2 max-tablet:h-[35px] max-tablet:w-[480px]">
         <Image src="/svg/offer-edge.svg" alt="" width={1490} height={69} className="size-full max-w-none" />
       </div>
     </section>

@@ -54,7 +54,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   const offset = (pos + CENTER) * STEP + CARD / 2;
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full max-tablet:[zoom:0.75]">
       <div className="absolute bottom-[510px] left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-[38px] max-notebook:gap-[30px]">
         <button
           type="button"
