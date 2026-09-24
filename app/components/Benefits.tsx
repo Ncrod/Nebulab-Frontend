@@ -44,22 +44,22 @@ function IconBadge({ icon }: { icon: string }) {
 
 export default function Benefits() {
   return (
-    <section className="flex flex-col items-center justify-center pb-[232px] pt-[169px]">
-      <div className="flex items-start gap-[83px]">
-        <h2 className="w-[614px] self-stretch font-display text-[64px] font-medium leading-[1.045] text-white">
+    <section className="flex w-full flex-col items-center justify-center px-section pb-[232px] pt-[169px]">
+      <div className="flex w-full max-w-[1271px] flex-col items-center gap-[50px] notebook:flex-row notebook:items-start notebook:gap-[83px]">
+        <h2 className="w-full min-w-0 flex-none self-center text-center tablet:max-notebook:max-w-[615px] notebook:text-left notebook:sticky notebook:top-[120px] notebook:w-auto notebook:flex-[614] notebook:self-start font-display text-[64px] font-medium leading-[1.045] text-white tablet:max-desktop:text-[44px] notebook:max-desktop:max-w-[470px]">
           Buying technology should{" "}
           <span className="bg-gradient-to-r from-white to-[#666] bg-clip-text text-transparent">
             feel this simple
           </span>
         </h2>
 
-        <ul className="flex w-[574px] flex-col items-start gap-[71px]">
+        <ul className="flex w-full min-w-0 flex-none notebook:w-auto notebook:flex-[574] flex-col items-start gap-[71px] tablet:max-desktop:max-w-[520px]">
           {benefits.map(({ title, description, icon }) => (
             <li key={title} className="flex w-full items-center gap-[42px]">
               <IconBadge icon={icon} />
               <div className="flex min-w-px flex-1 flex-col items-start leading-[normal]">
-                <p className="w-[295px] font-display text-[40px] font-normal text-white">{title}</p>
-                <p className="w-full font-sans text-[24px] text-[#a0a0a0]">{description}</p>
+                <p className="w-full font-display text-[40px] font-normal text-white tablet:max-desktop:text-[30px]">{title}</p>
+                <p className="w-full font-sans text-[24px] text-[#a0a0a0] tablet:max-desktop:text-[20px]">{description}</p>
               </div>
             </li>
           ))}

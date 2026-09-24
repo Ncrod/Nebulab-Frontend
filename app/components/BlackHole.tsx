@@ -637,12 +637,13 @@ export function BlackHole({
     }
 
     function resize() {
-      const rect = host!.getBoundingClientRect();
+      // Layout size, not getBoundingClientRect: the host may sit inside a scaled
+      // (transform) ancestor, and the transform would otherwise be applied twice.
       const dpr = software
         ? 1
         : Math.min(window.devicePixelRatio || 1, Math.max(1, props.current.maxDpr));
-      const cssW = Math.max(1, Math.round(rect.width));
-      const cssH = Math.max(1, Math.round(rect.height));
+      const cssW = Math.max(1, host!.offsetWidth);
+      const cssH = Math.max(1, host!.offsetHeight);
       const scale = software
         ? 0.34
         : Math.min(1, Math.max(0.4, props.current.resolution));

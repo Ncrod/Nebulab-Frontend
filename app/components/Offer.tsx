@@ -27,7 +27,7 @@ function CardText({ children }: { children: string }) {
 
 export default function Offer() {
   return (
-    <section className="relative h-[1249px] w-full overflow-x-clip">
+    <section className="relative w-full overflow-x-clip pt-[68px] notebook:h-[1249px] notebook:pt-0">
       {/* Light spilling over the raised centre of the panel */}
       <div
         aria-hidden="true"
@@ -39,9 +39,10 @@ export default function Offer() {
       </div>
 
       {/* Panel */}
-      <div className="absolute inset-x-0 top-[68px] h-[1181px] overflow-clip border-t border-[#363636] bg-[#0b0b0c]">
-        <div className="absolute left-1/2 top-[38px] flex w-[1100px] -translate-x-1/2 flex-col items-center gap-[83px]">
-          <div className="flex w-[815px] flex-col items-center justify-center gap-[12px]">
+      <div className="relative overflow-clip border-t border-[#363636] bg-[#0b0b0c] pb-[200px] pt-[38px] notebook:absolute notebook:inset-x-0 notebook:top-[68px] notebook:h-[1181px] notebook:p-0">
+        <div className="flex justify-center px-section notebook:absolute notebook:inset-x-0 notebook:top-[38px]">
+        <div className="flex w-full max-w-[1100px] flex-col items-center gap-[83px]">
+          <div className="flex w-full max-w-[815px] flex-col items-center justify-center gap-[12px]">
             <div
               className="relative flex items-center gap-[10px] rounded-[100px] border border-white/10 px-[30px] py-[15px] backdrop-blur-[1.25px]"
               style={{ backgroundImage: "linear-gradient(0.08deg, rgba(84,84,84,0.33) 0%, rgba(54,54,54,0.1) 100%)" }}
@@ -55,23 +56,23 @@ export default function Offer() {
             >
               Everything you need, all in one place
             </h2>
-            <p className="w-[583px] text-center font-sans text-[20px] leading-[1.46] text-[#a9a9a9]">
+            <p className="w-full max-w-[583px] text-center font-sans text-[20px] leading-[1.46] text-[#a9a9a9]">
               Discover Apple products and accessories carefully selected to enhance your everyday experience.
             </p>
           </div>
 
-          <div className="flex w-full items-start justify-center gap-[22px]">
-            <div className="flex w-[544.52px] shrink-0 flex-col items-start gap-[22px]">
-              <div className={`${cardBase} ${cardTall} px-[29px] py-[35px]`}>
-                <div className="flex flex-col items-center gap-[26px]">
-                  <div className="flex w-[472px] flex-col items-start gap-[13px]">
+          <div className="flex w-full max-w-[550px] flex-col items-stretch justify-center gap-[22px] notebook:max-w-none notebook:flex-row">
+            <div className="flex w-full min-w-0 flex-none flex-col items-start gap-[22px] notebook:w-auto notebook:flex-[544.52]">
+              <div className={`${cardBase} ${cardTall} max-desktop:flex-1 px-[29px] py-[35px]`}>
+                <div className="flex w-full flex-col items-center gap-[26px]">
+                  <div className="flex w-full flex-col items-start gap-[13px]">
                     <CardTitle icon="/svg/icon-apple.svg" gap="gap-[9px]">Apple Products</CardTitle>
                     <CardText>
                       Discover the latest iPhone, iPad, Mac, Apple Watch and more, with products selected for quality and performance.
                     </CardText>
                   </div>
-                  <div className="flex w-[483.519px] flex-col items-start overflow-clip rounded-[20px] border-[0.961px] border-white/[0.09] bg-[#0e0e0e] p-[9.613px] shadow-[0px_0.579px_1.274px_-0.561px_rgba(0,0,0,0.09),0px_2.2px_4.84px_-1.121px_rgba(0,0,0,0.1),0px_9.613px_21.148px_-1.682px_rgba(0,0,0,0.16)]">
-                    <div className="relative h-[307.595px] w-[464.294px] shrink-0 overflow-clip rounded-[13.731px] border-[0.577px] border-white/20 bg-white">
+                  <div className="flex w-full max-w-[483.519px] flex-col items-start overflow-clip rounded-[20px] border-[0.961px] border-white/[0.09] bg-[#0e0e0e] p-[9.613px] shadow-[0px_0.579px_1.274px_-0.561px_rgba(0,0,0,0.09),0px_2.2px_4.84px_-1.121px_rgba(0,0,0,0.1),0px_9.613px_21.148px_-1.682px_rgba(0,0,0,0.16)]">
+                    <div className="relative h-[307.595px] w-full shrink-0 overflow-clip rounded-[13.731px] border-[0.577px] border-white/20 bg-white">
                       <video
                         src="/videos/vid-iphone.webm"
                         poster="/images/offer/apple-products.png"
@@ -87,8 +88,8 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardShort} px-[31px] py-[35px]`}>
-                <div className="flex w-[463px] flex-col items-start gap-[13px]">
+              <div className={`${cardBase} ${cardShort} flex-1 px-[31px] py-[35px]`}>
+                <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-headphones.svg" gap="gap-[8px]">Accessories</CardTitle>
                   <CardText>
                     Complete your setup with chargers, cases, cables and accessories designed for your Apple devices.
@@ -97,9 +98,9 @@ export default function Offer() {
               </div>
             </div>
 
-            <div className="flex w-[526px] shrink-0 flex-col items-start gap-[22px]">
-              <div className={`${cardBase} ${cardShort} px-[30px] py-[35px]`}>
-                <div className="flex w-[463px] flex-col items-start gap-[13px]">
+            <div className="flex w-full min-w-0 flex-none flex-col items-start gap-[22px] notebook:w-auto notebook:flex-[526]">
+              <div className={`${cardBase} ${cardShort} max-desktop:flex-1 px-[30px] py-[35px]`}>
+                <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-sparkles.svg" gap="gap-[6px]">For Your Everyday</CardTitle>
                   <CardText>
                     Find the right products to make your work, entertainment and everyday life more seamless.
@@ -107,8 +108,8 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardShort} px-[30px] py-[34px]`}>
-                <div className="flex w-[463px] flex-col items-start gap-[13px]">
+              <div className={`${cardBase} ${cardShort} max-desktop:flex-1 px-[30px] py-[34px]`}>
+                <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-diamond.svg" gap="gap-[8px]">Premium Selection</CardTitle>
                   <CardText>
                     Carefully selected products that combine functionality, design and the quality you expect.
@@ -116,7 +117,7 @@ export default function Offer() {
                 </div>
               </div>
 
-              <div className={`${cardBase} ${cardTall} relative h-[362px] gap-[30px] px-[30px] py-[34px]`}>
+              <div className={`${cardBase} ${cardTall} relative flex-1 gap-[30px] desktop:min-h-[362px] px-[30px] py-[34px]`}>
                 <div className="flex w-full flex-col items-start gap-[13px]">
                   <CardTitle icon="/svg/icon-chart.svg" gap="gap-[9px]">Upgrade Your Setup</CardTitle>
                   <CardText>
@@ -124,20 +125,21 @@ export default function Offer() {
                   </CardText>
                 </div>
                 <Image
-                  src="/images/offer/watch.png"
+                  src="/images/offer/watchh.webp"
                   alt=""
-                  width={1536}
-                  height={768}
-                  className="pointer-events-none absolute left-[calc(50%+0.24px)] top-[151px] h-[238px] w-[476px] -translate-x-1/2 object-cover"
+                  width={1070}
+                  height={535}
+                  className="pointer-events-none -mb-[61px] h-auto w-[calc(100%-50px)] max-w-[476px] self-center desktop:absolute desktop:left-[calc(50%+0.24px)] desktop:top-[151px] desktop:mb-0 desktop:h-[238px] desktop:w-[476px] desktop:-translate-x-1/2 desktop:self-auto desktop:object-cover"
                 />
               </div>
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Raised, curved top edge of the panel */}
-      <div className="pointer-events-none absolute left-[calc(50%+3.5px)] top-0 h-[69px] w-[1490px] -translate-x-1/2">
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[69px] w-full max-w-[1490px] -translate-x-1/2">
         <Image src="/svg/offer-edge.svg" alt="" width={1490} height={69} className="size-full max-w-none" />
       </div>
     </section>

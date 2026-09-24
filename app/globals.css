@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
 :root {
+  --k: 1; /* hero backdrop scale factor, see HeroScale */
+  --m: 1; /* featured arc scale factor, see HeroScale */
   --background: #050505;
   --foreground: #ededed;
+}
+
+@theme {
+  --animate-ticker: ticker 30s linear infinite;
+
+  @keyframes ticker {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 @theme inline {
@@ -16,6 +31,19 @@
   --breakpoint-tablet: 768px;
   --breakpoint-notebook: 1140px;
   --breakpoint-desktop: 1440px;
+}
+
+/* Side padding of every section: mobile 1.25rem, tablet/notebook 10%, desktop as designed. */
+@utility px-section {
+  padding-inline: 1.25rem;
+
+  @media (width >= 768px) {
+    padding-inline: 10%;
+  }
+
+  @media (width >= 1440px) {
+    padding-inline: 10px;
+  }
 }
 
 body {

@@ -13,7 +13,7 @@ const fadeText =
 
 export default function Navbar() {
   return (
-    <header className="flex w-full justify-center px-[10px] py-[28px]">
+    <header className="flex w-full justify-center px-5 tablet:px-[10%] py-[28px]">
       <nav className="flex w-full max-w-[1654px] items-center justify-between">
         <Link href="/" aria-label="Nebulab">
           <Image

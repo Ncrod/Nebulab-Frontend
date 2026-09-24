@@ -53,7 +53,7 @@ export default function Featured() {
       {/* Planet horizon, fading in from the top */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-[calc(50%-0.53px)] top-[-235.61px] h-[1039.221px] w-[1994.666px] -translate-x-1/2 mix-blend-lighten [mask-image:linear-gradient(to_bottom,transparent_220px,#000_565px)]"
+        className="pointer-events-none absolute left-[calc(50%-0.53px)] top-[-235.61px] h-[1039.221px] w-[1994.666px] -translate-x-1/2 origin-[50%_328.61px] scale-[var(--m)] mix-blend-lighten [mask-image:linear-gradient(to_bottom,transparent_220px,#000_565px)]"
       >
         <Image
           src="/images/planet.png"
@@ -69,16 +69,18 @@ export default function Featured() {
         alt=""
         width={870}
         height={486}
-        className="relative h-[486px] w-[870px] shrink-0 object-cover"
+        className="relative h-[486px] w-[870px] shrink-0 object-cover tablet:max-notebook:h-auto tablet:max-notebook:w-full tablet:max-notebook:max-w-[770px]"
       />
 
-      <div className="relative mt-[117px] flex w-full flex-col items-center gap-[262px]">
-        <h2 className="w-[1171px] max-w-full text-center font-display text-[80px] font-medium leading-[1.045] text-white">
+      <div className="relative mt-[117px] flex w-full flex-col items-center gap-[262px] tablet:max-notebook:gap-[160px]">
+        <div className="flex w-full justify-center px-section">
+        <h2 className="w-[1171px] max-w-full text-center font-display text-[80px] font-medium leading-[1.045] text-white notebook:max-desktop:text-[70px] tablet:max-notebook:text-[47px]">
           Selected to{" "}
           <span className="bg-gradient-to-r from-white to-[#666] bg-clip-text text-transparent">
             upgrade your day
           </span>
         </h2>
+        </div>
         <ProductCarousel products={products} />
       </div>
     </section>
