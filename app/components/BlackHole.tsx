@@ -43,6 +43,8 @@ export interface BlackHoleProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Render scale, 0.4 to 1. */
   resolution?: number;
   maxDpr?: number;
+  /** Ceiling on ray-marched pixels per frame. */
+  maxPixels?: number;
   /** Where the hole sits in the frame, fractions of width/height, top-left origin. */
   focus?: [number, number];
   paused?: boolean;
@@ -425,6 +427,7 @@ export function BlackHole({
   steps = 300,
   resolution = 0.7,
   maxDpr = 1.75,
+  maxPixels = 900_000,
   focus = [0.5, 0.5],
   paused = false,
   className = "",
@@ -437,13 +440,13 @@ export function BlackHole({
     distance, elevation, azimuth, orbitSpeed, roll, fov, diskInner, diskOuter,
     diskThickness, diskDensity, brightness, spinSpeed, grain, doppler, hotColor,
     midColor, coolColor, starBrightness, glow, exposure, vignette, steps,
-    resolution, maxDpr, focus, paused,
+    resolution, maxDpr, maxPixels, focus, paused,
   });
   props.current = {
     distance, elevation, azimuth, orbitSpeed, roll, fov, diskInner, diskOuter,
     diskThickness, diskDensity, brightness, spinSpeed, grain, doppler, hotColor,
     midColor, coolColor, starBrightness, glow, exposure, vignette, steps,
-    resolution, maxDpr, focus, paused,
+    resolution, maxDpr, maxPixels, focus, paused,
   };
 
   useEffect(() => {
@@ -595,6 +598,10 @@ export function BlackHole({
     let bloomB: Target | null = null;
     let settled = 0;
 
+    // Adaptive quality: drops when frames run slow, never climbs back.
+    let quality = 1;
+    let slowFrames = 0;
+
     let width = 0;
     let height = 0;
     let sceneW = 0;
@@ -647,10 +654,21 @@ export function BlackHole({
       const scale = software
         ? 0.34
         : Math.min(1, Math.max(0.4, props.current.resolution));
-      const w = Math.max(2, Math.round(cssW * dpr));
-      const h = Math.max(2, Math.round(cssH * dpr));
-      const sw = Math.max(2, Math.round(w * scale));
-      const sh = Math.max(2, Math.round(h * scale));
+      // Cap the ray-marched pixel count: the canvas can be huge in CSS px, and
+      // cost scales with pixels, not with what the mask leaves visible.
+      let sw = cssW * dpr * scale * quality;
+      let sh = cssH * dpr * scale * quality;
+      const budget = software ? 250_000 : Math.max(100_000, props.current.maxPixels) * quality;
+      if (sw * sh > budget) {
+        const k = Math.sqrt(budget / (sw * sh));
+        sw *= k;
+        sh *= k;
+      }
+      sw = Math.max(2, Math.round(sw));
+      sh = Math.max(2, Math.round(sh));
+      // Present at scene resolution; CSS upscales. The image is soft anyway.
+      const w = sw;
+      const h = sh;
       if (w === width && h === height && sw === sceneW && sh === sceneH) return;
       width = w;
       height = h;
@@ -823,6 +841,14 @@ export function BlackHole({
       lastFrame = now;
       if (!props.current.paused && !reduced) clock += dt;
       render(clock);
+
+      if (dt > 0.026 && quality > 0.4) {
+        if (++slowFrames >= 20) {
+          slowFrames = 0;
+          quality = Math.max(0.4, quality * 0.8);
+          resize();
+        }
+      } else if (slowFrames > 0) slowFrames--;
     }
 
     if (!build()) {
