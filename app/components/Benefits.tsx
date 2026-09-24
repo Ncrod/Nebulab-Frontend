@@ -44,7 +44,7 @@ function IconBadge({ icon }: { icon: string }) {
 
 export default function Benefits() {
   return (
-    <section className="flex w-full flex-col items-center justify-center px-section pb-[232px] pt-[169px]">
+    <section className="flex w-full flex-col items-center justify-center px-section pb-[232px] pt-[169px] max-notebook:pb-[202px] max-notebook:pt-[99px]">
       <div className="flex w-full max-w-[1271px] flex-col items-center gap-[50px] notebook:flex-row notebook:items-start notebook:gap-[83px]">
         <h2 className="w-full min-w-0 flex-none self-center text-center max-notebook:max-w-[615px] max-tablet:max-w-[480px] notebook:text-left notebook:sticky notebook:top-[120px] notebook:w-auto notebook:flex-[614] notebook:self-start font-display text-[64px] font-medium leading-[1.045] text-white max-desktop:text-[44px] max-tablet:text-[36px] notebook:max-desktop:max-w-[470px]">
           Buying technology should{" "}
