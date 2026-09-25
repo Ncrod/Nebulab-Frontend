@@ -56,19 +56,20 @@ export default function ProductsBanner() {
   }, []);
 
   return (
-    <div ref={rootRef} className="relative aspect-[1350/660] w-full overflow-clip rounded-[49px] bg-white max-tablet:rounded-[24px]">
+    <div ref={rootRef} className="relative mx-auto aspect-[1350/660] w-full max-tablet:max-w-[550px] overflow-clip rounded-[49px] bg-white max-tablet:rounded-[24px]">
       {slides.map(({ src, alt }, i) => (
         <div key={src} data-slide className={`absolute inset-0 ${i === 0 ? "" : "invisible"}`}>
           {/* unoptimized: the slides are already exported at full size, Next would recompress them at quality 75.
-              The last row and column of pixels of each slide are semi-transparent, which shows as a faint line on the
-              dark page; scaling from the top-left pushes them past the clipped edge. */}
+              object-fill stretches each slide over the whole frame (no crop, no bars). The last row and column of
+              pixels of the files are semi-transparent, so the image is 1px larger than the frame: they fall outside. */}
           <Image
             src={src}
             alt={alt}
-            fill
+            width={2593}
+            height={1180}
             unoptimized
             priority={i === 0}
-            className="origin-top-left scale-[1.004] object-cover"
+            className="absolute left-0 top-0 h-[calc(100%+1px)] w-[calc(100%+1px)] max-w-none object-fill"
           />
         </div>
       ))}

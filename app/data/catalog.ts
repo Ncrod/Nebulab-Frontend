@@ -27,6 +27,14 @@ export interface CatalogProduct {
 
 export const PAGE_SIZE = 9;
 
+/** Reads the `?category=` value of a link into a filter: a category name (any case), "new", or everything. */
+export function parseFilter(value: string | undefined): CatalogFilter {
+  const v = (value ?? "").trim().toLowerCase();
+  if (v === "new") return "new";
+  if (v === "watch") return "Apple Watch"; // the home page calls it just "Watch"
+  return CATEGORIES.find((category) => category.toLowerCase() === v) ?? "all";
+}
+
 // Placeholder photo: every product uses the same one until the real images exist.
 const IMAGE = "/images/catalog/airpods-pro-2.png";
 

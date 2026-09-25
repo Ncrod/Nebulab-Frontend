@@ -6,6 +6,11 @@ export const metadata: Metadata = {
 };
 
 // Signed-in products. Temporary preview route: once auth exists, "/products" will render this variant by session.
-export default function SignedInProducts() {
-  return <ProductsPage loggedIn />;
+export default async function SignedInProducts({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  return <ProductsPage loggedIn category={category} />;
 }

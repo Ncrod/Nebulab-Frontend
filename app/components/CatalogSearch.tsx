@@ -14,7 +14,7 @@ export default function CatalogSearch({
     <form
       role="search"
       onSubmit={(e) => e.preventDefault()}
-      className="flex w-[580px] max-w-full items-center justify-between gap-[10px] rounded-[300px] bg-white py-[7px] pl-[30px] pr-[9px] max-tablet:w-full"
+      className="flex w-[580px] max-w-full items-center justify-between gap-[10px] rounded-[300px] bg-white py-[7px] pl-[30px] pr-[9px] max-tablet:w-full max-tablet:max-w-[580px]"
     >
       <Image src="/svg/catalog/search.svg" alt="" width={24} height={24} className="shrink-0" />
       <input

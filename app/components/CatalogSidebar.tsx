@@ -25,7 +25,10 @@ export default function CatalogSidebar({
   selected: CatalogFilter;
   onSelect: (filter: CatalogFilter) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  // Starts closed, unless a category is already selected (arriving from a link): then its list is open so the
+  // choice is visible. The panel's initial height (below) matches.
+  const [startsOpen] = useState(() => (CATEGORIES as readonly string[]).includes(selected));
+  const [open, setOpen] = useState(startsOpen);
   const panelRef = useRef<HTMLDivElement>(null);
 
   function toggle() {
@@ -68,7 +71,8 @@ export default function CatalogSidebar({
             <CategoryLabel label="All product" />
           </button>
 
-          <div ref={panelRef} id="catalog-subcategories" inert={!open} className="overflow-hidden">
+          {/* The initial style is a constant, so React never rewrites it: after the first render GSAP owns the height. */}
+          <div ref={panelRef} id="catalog-subcategories" inert={!open} style={startsOpen ? undefined : { height: 0 }} className="overflow-hidden">
             <div className="relative pt-[25px]">
               {/* Vertical guide beside the subcategories, from the header down to the last one. */}
               <div aria-hidden="true" className="absolute bottom-0 left-[27px] top-[2px] w-px bg-white/[0.22]" />

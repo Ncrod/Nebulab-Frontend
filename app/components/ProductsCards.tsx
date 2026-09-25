@@ -17,7 +17,7 @@ const cards: Card[] = [
 /** The three product cards under the showcase banner. The videos start as they scroll into view (looping for now, to review them; drop `loop` to play once and rest on the last frame). */
 export default function ProductsCards() {
   return (
-    <div className="flex gap-[40px] max-notebook:gap-[20px] max-tablet:flex-col">
+    <div className="mx-auto flex w-full gap-[40px] max-notebook:gap-[20px] max-tablet:max-w-[550px] max-tablet:flex-col">
       {cards.map((card) => (
         <div
           key={card.src}

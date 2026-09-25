@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "Products | Nebulab",
 };
 
-export default function Products() {
-  return <ProductsPage />;
+export default async function Products({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  return <ProductsPage category={category} />;
 }

@@ -12,8 +12,8 @@ import CatalogSidebar from "./CatalogSidebar";
  * Products page, section 3 (Figma 96:382): search, category list, product grid and pager.
  * Filtering, search and paging run on the mock data in ../data/catalog; the backend will replace that.
  */
-export default function ProductsCatalog() {
-  const [filter, setFilter] = useState<CatalogFilter>("all");
+export default function ProductsCatalog({ initialFilter = "all" }: { initialFilter?: CatalogFilter }) {
+  const [filter, setFilter] = useState<CatalogFilter>(initialFilter);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -51,11 +51,11 @@ export default function ProductsCatalog() {
   }
 
   return (
-    <section className="pb-[170px] pt-[120px] max-notebook:pb-[100px] max-notebook:pt-[80px] max-tablet:pb-[60px] max-tablet:pt-[48px]">
+    <section id="catalog" className="pb-[170px] pt-[120px] max-notebook:pb-[100px] max-notebook:pt-[80px] max-tablet:pb-[60px] max-tablet:pt-[48px]">
       {/* From the desktop breakpoint up to 1770px the fixed side nav would cover the left edge, so it gets room. */}
       <div className="mx-auto flex w-full max-w-[1550px] flex-col gap-[119px] px-section desktop:max-[1770px]:pl-[110px] max-notebook:gap-[56px] max-tablet:gap-[36px]">
-        <div className="flex items-center justify-between gap-[24px] py-[10px] max-tablet:flex-col max-tablet:items-start">
-          <h1 className="font-display text-[64px] font-medium leading-normal text-white max-notebook:text-[48px] max-tablet:text-[36px]">
+        <div className="flex items-center justify-between gap-[24px] py-[10px] max-notebook:flex-col">
+          <h1 className="font-display text-[64px] font-medium leading-normal text-white notebook:max-[1337px]:text-[42px] max-notebook:text-center max-notebook:text-[48px] max-tablet:text-[36px]">
             Give{" "}
             <span className="bg-[linear-gradient(90deg,#FFF_0%,#666_100%)] bg-clip-text text-transparent">all you need</span>
           </h1>
@@ -63,12 +63,12 @@ export default function ProductsCatalog() {
           <CatalogSearch value={query} onChange={changeQuery} />
         </div>
 
-        <div className="flex items-start justify-between gap-[40px] max-notebook:flex-col">
+        <div className="flex items-start justify-between gap-[40px] max-notebook:flex-col max-tablet:mx-auto max-tablet:w-full max-tablet:max-w-[400px]">
           <CatalogSidebar selected={filter} onSelect={selectFilter} />
 
           <div ref={gridRef} className="flex w-full min-w-0 max-w-[1050px] flex-col gap-[46px] max-notebook:max-w-none">
             {visible.length > 0 ? (
-              <div className="grid grid-cols-3 gap-[40px] max-desktop:gap-[24px] max-notebook:grid-cols-2 max-tablet:grid-cols-1">
+              <div className="grid grid-cols-3 gap-[40px] max-desktop:gap-[24px] max-notebook:grid-cols-2 max-tablet:grid-cols-1 max-tablet:gap-y-[48px]">
                 {visible.map((product) => (
                   <CatalogProductCard key={product.id} product={product} />
                 ))}

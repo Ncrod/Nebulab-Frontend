@@ -12,7 +12,7 @@ export default function LandingPage({ loggedIn = false }: { loggedIn?: boolean }
     <main className="min-h-screen overflow-x-clip">
       <Navbar loggedIn={loggedIn} />
       <Hero />
-      <Categories />
+      <Categories loggedIn={loggedIn} />
       <Featured />
       <Benefits />
       <Offer />
