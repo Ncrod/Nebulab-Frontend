@@ -5,30 +5,37 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import ArrowIcon from "./ArrowIcon";
 
-const links = [
-  { label: "Home", href: "/" },
+const links = (loggedIn: boolean) => [
+  { label: "Home", href: loggedIn ? "/home" : "/" },
   { label: "Products", href: "/products" },
   { label: "About us", href: "/about" },
 ];
 
 // Tablet and mobile dropdown: the desktop SideNav (cart, account) is not shown there.
-const menuLinks = [
-  { label: "Home", href: "/" },
+// Cart and account need a session: signed out they lead to the login.
+const menuLinks = (loggedIn: boolean) => [
+  { label: "Home", href: loggedIn ? "/home" : "/" },
   { label: "Products", href: "/products" },
-  { label: "Your bag", href: "/cart" },
+  { label: "Your bag", href: loggedIn ? "/cart" : "/login" },
   { label: "About us", href: "/about" },
-  { label: "Account", href: "/account" },
+  { label: "Account", href: loggedIn ? "/account" : "/login" },
 ];
 
 const fadeText =
   "bg-gradient-to-b from-white to-white/0 to-[115.97%] bg-clip-text text-transparent";
+
+const pill =
+  "group flex items-center gap-[15px] overflow-clip rounded-[200px] bg-white py-[8px] pl-[31px] pr-[8px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background";
+
+const mobilePill =
+  "flex items-center rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[24px] font-medium max-tablet:text-[20px] leading-[24.32px] tracking-[0.304px] text-background";
 
 const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 const line =
   "absolute left-1/2 h-[4px] w-[36px] max-tablet:h-[3px] max-tablet:w-[28px] -translate-x-1/2 rounded-full bg-white transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
-export default function Navbar() {
+export default function Navbar({ loggedIn = false }: { loggedIn?: boolean }) {
   const [open, setOpen] = useState(false);
 
   // Close with Escape, and whenever the desktop layout takes over.
@@ -51,7 +58,7 @@ export default function Navbar() {
       <div className="max-notebook:fixed max-notebook:inset-x-0 max-notebook:top-0 max-notebook:max-h-dvh max-notebook:overflow-y-auto max-notebook:border-b max-notebook:border-[#3f3f3f] max-notebook:bg-[#0f0f0f]">
       <div className="flex w-full justify-center px-5 py-[28px] max-tablet:py-[16px] tablet:px-[10%]">
         <nav className="flex w-full max-w-[1654px] items-center justify-between">
-          <Link href="/" aria-label="Nebulab" onClick={() => setOpen(false)}>
+          <Link href={loggedIn ? "/home" : "/"} aria-label="Nebulab" onClick={() => setOpen(false)}>
             <Image
               src="/svg/nebulab-logo.svg"
               alt="Nebulab"
@@ -71,7 +78,7 @@ export default function Navbar() {
           </Link>
 
           <ul className="hidden items-center gap-[50px] font-display text-[20px] font-medium notebook:flex">
-            {links.map(({ label, href }) => (
+            {links(loggedIn).map(({ label, href }) => (
               <li key={label}>
                 <Link href={href} className={fadeText}>
                   {label}
@@ -81,19 +88,25 @@ export default function Navbar() {
           </ul>
 
           <div className="hidden items-center gap-[19px] notebook:flex">
-            <Link
-              href="/sign-in"
-              className={`font-display text-[20px] font-normal ${fadeText}`}
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="group flex items-center gap-[15px] overflow-clip rounded-[200px] bg-white py-[8px] pl-[31px] pr-[8px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background"
-            >
-              Sign up
-              <ArrowIcon />
-            </Link>
+            {loggedIn ? (
+              <Link href="/contact" className={pill}>
+                Contact us
+                <ArrowIcon />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={`font-display text-[20px] font-normal ${fadeText}`}
+                >
+                  Sign in
+                </Link>
+                <Link href="/login?mode=signup" className={pill}>
+                  Sign up
+                  <ArrowIcon />
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Hamburger: two lines that turn into an X */}
@@ -137,7 +150,7 @@ export default function Navbar() {
             style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
             <ul className="flex flex-col items-center gap-[14px] font-display text-[24px] font-medium max-tablet:text-[20px]">
-              {menuLinks.map(({ label, href }) => (
+              {menuLinks(loggedIn).map(({ label, href }) => (
                 <li key={label}>
                   <Link
                     href={href}
@@ -152,22 +165,35 @@ export default function Navbar() {
             </ul>
 
             <div className="flex items-center gap-[19px]">
-              <Link
-                href="/sign-in"
-                className={`font-display text-[24px] font-normal max-tablet:text-[20px] ${fadeText}`}
-                tabIndex={open ? undefined : -1}
-                onClick={() => setOpen(false)}
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/sign-up"
-                className="flex items-center rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[24px] font-medium max-tablet:text-[20px] leading-[24.32px] tracking-[0.304px] text-background"
-                tabIndex={open ? undefined : -1}
-                onClick={() => setOpen(false)}
-              >
-                Sign up
-              </Link>
+              {loggedIn ? (
+                <Link
+                  href="/contact"
+                  className={mobilePill}
+                  tabIndex={open ? undefined : -1}
+                  onClick={() => setOpen(false)}
+                >
+                  Contact us
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className={`font-display text-[24px] font-normal max-tablet:text-[20px] ${fadeText}`}
+                    tabIndex={open ? undefined : -1}
+                    onClick={() => setOpen(false)}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/login?mode=signup"
+                    className={mobilePill}
+                    tabIndex={open ? undefined : -1}
+                    onClick={() => setOpen(false)}
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

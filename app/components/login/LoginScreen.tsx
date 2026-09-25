@@ -10,8 +10,8 @@ const MoltenPanes = dynamic(() => import("./molten-panes"), { ssr: false });
 type Mode = "login" | "signup" | "forgot";
 
 // Design only: forms are not wired to any backend.
-export function LoginScreen() {
-  const [mode, setMode] = useState<Mode>("login");
+export function LoginScreen({ initialMode = "login" }: { initialMode?: Mode }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
 
   // Mode switches fade/rise the form and tween the block height so the logos glide.
