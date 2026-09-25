@@ -4,6 +4,7 @@ import gsap from "gsap";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isSignedInPath, pageOf } from "../lib/session-routes";
 
 // One side nav for the whole site (mounted in the root layout, so it survives page changes and the
 // black ball can travel between icons). Session and active page are read from the URL: everything
@@ -12,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const items = (loggedIn: boolean) => [
   { label: "Home", href: loggedIn ? "/home" : "/", match: "/", glyph: "/svg/sidenav/home.svg" },
   { label: "Products", href: loggedIn ? "/home/products" : "/products", match: "/products", glyph: "/svg/sidenav/box.svg" },
-  { label: "Cart", href: loggedIn ? "/cart" : "/login", match: "/cart", glyph: "/svg/sidenav/bag.svg" },
+  { label: "Cart", href: loggedIn ? "/bag" : "/login", match: "/bag", glyph: "/svg/sidenav/bag.svg" },
   { label: "Account", href: loggedIn ? "/account" : "/login", match: "/account", glyph: "/svg/sidenav/user.svg" },
 ];
 
@@ -27,16 +28,16 @@ const LIGHT = "#ffffff";
 
 /** Index of the item whose page we are on, or -1 (login, or a page without an item). */
 function activeIndexFor(pathname: string) {
-  const loggedIn = pathname === "/home" || pathname.startsWith("/home/");
+  const loggedIn = isSignedInPath(pathname);
   // "/home/products" and "/products" both mean the products page.
-  const page = loggedIn ? pathname.slice("/home".length) || "/" : pathname;
+  const page = pageOf(pathname);
   return items(loggedIn).findIndex(({ match }) => (match === "/" ? page === "/" : page === match || page.startsWith(`${match}/`)));
 }
 
 export default function SideNav() {
   const pathname = usePathname();
   const onLogin = pathname.startsWith("/login");
-  const loggedIn = pathname === "/home" || pathname.startsWith("/home/");
+  const loggedIn = isSignedInPath(pathname);
   const activeIndex = activeIndexFor(pathname);
 
   // Where the ball and the light glyph are on the very first render. It never changes, so React does not

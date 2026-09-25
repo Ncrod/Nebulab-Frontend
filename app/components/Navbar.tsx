@@ -16,7 +16,7 @@ const links = (loggedIn: boolean) => [
 const menuLinks = (loggedIn: boolean) => [
   { label: "Home", href: loggedIn ? "/home" : "/" },
   { label: "Products", href: loggedIn ? "/home/products" : "/products" },
-  { label: "Your bag", href: loggedIn ? "/cart" : "/login" },
+  { label: "Your bag", href: loggedIn ? "/bag" : "/login" },
   { label: "About us", href: "/about" },
   { label: "Account", href: loggedIn ? "/account" : "/login" },
 ];

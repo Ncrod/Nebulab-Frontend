@@ -2,11 +2,10 @@ import Image from "next/image";
 import type { CatalogProduct } from "../data/catalog";
 import ProductPurchase from "./ProductPurchase";
 
-// Placeholder copy and options from the design: the product data will bring its own once the backend exists.
+// Placeholder copy from the design: the product data will bring its own once the backend exists. (The options, on the other hand,
+// are already per product: see `options` in ../data/catalog.)
 const DESCRIPTION =
   "Our most advanced series of chips ever built for a pro laptop. Each chip in the M5 family delivers phenomenal single- and multithreaded CPU performance and faster unified memory.";
-const STORAGE = ["256GB", "1TB", "2TB"];
-const COLORS = ["Silver", "Blush", "Citrus", "Citrus"];
 
 const perks = [
   { icon: "/svg/product/shipping.svg", text: "Shop your favorite Apple products and enjoy complimentary shipping on orders over $200." },
@@ -74,7 +73,8 @@ export default function ProductOverview({ product, loggedIn = false }: { product
               <p className="font-sans text-[40px] font-medium leading-[1.045] text-black max-tablet:text-[30px]">${product.price}</p>
             </div>
 
-            <ProductPurchase product={product} storage={STORAGE} colors={COLORS} loggedIn={loggedIn} />
+            {/* Keyed by product: going to another product must not carry over the choices made on this one. */}
+            <ProductPurchase key={product.slug} product={product} loggedIn={loggedIn} />
           </div>
         </div>
       </div>
