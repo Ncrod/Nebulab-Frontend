@@ -1,6 +1,6 @@
 // Until real auth exists, the URL says whether we are "signed in": everything under /home is the signed-in variant
 // of a public page, and pages that only exist with a session (the bag) count as signed in on their own.
-const SIGNED_IN_ONLY = ["/bag"];
+const SIGNED_IN_ONLY = ["/bag", "/account"];
 
 function isUnder(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`);
