@@ -7,7 +7,7 @@ import ArrowIcon from "./ArrowIcon";
 
 const links = (loggedIn: boolean) => [
   { label: "Home", href: loggedIn ? "/home" : "/" },
-  { label: "Products", href: "/products" },
+  { label: "Products", href: loggedIn ? "/home/products" : "/products" },
   { label: "About us", href: "/about" },
 ];
 
@@ -15,7 +15,7 @@ const links = (loggedIn: boolean) => [
 // Cart and account need a session: signed out they lead to the login.
 const menuLinks = (loggedIn: boolean) => [
   { label: "Home", href: loggedIn ? "/home" : "/" },
-  { label: "Products", href: "/products" },
+  { label: "Products", href: loggedIn ? "/home/products" : "/products" },
   { label: "Your bag", href: loggedIn ? "/cart" : "/login" },
   { label: "About us", href: "/about" },
   { label: "Account", href: loggedIn ? "/account" : "/login" },
