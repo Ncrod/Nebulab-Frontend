@@ -18,7 +18,7 @@ export default function ProductsPage({ loggedIn = false, category }: { loggedIn?
       </div>
       {/* Keyed by the link's category, so following another category link starts the catalog over. */}
       <div className="max-tablet:order-1">
-        <ProductsCatalog key={category ?? "all"} initialFilter={parseFilter(category)} />
+        <ProductsCatalog key={category ?? "all"} initialFilter={parseFilter(category)} loggedIn={loggedIn} />
       </div>
       <div className="max-tablet:order-3">
         <Footer loggedIn={loggedIn} />

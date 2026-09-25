@@ -12,12 +12,13 @@ import CatalogSidebar from "./CatalogSidebar";
  * Products page, section 3 (Figma 96:382): search, category list, product grid and pager.
  * Filtering, search and paging run on the mock data in ../data/catalog; the backend will replace that.
  */
-export default function ProductsCatalog({ initialFilter = "all" }: { initialFilter?: CatalogFilter }) {
+export default function ProductsCatalog({ initialFilter = "all", loggedIn = false }: { initialFilter?: CatalogFilter; loggedIn?: boolean }) {
   const [filter, setFilter] = useState<CatalogFilter>(initialFilter);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const gridRef = useRef<HTMLDivElement>(null);
   const lenis = useLenis();
+  const productsBase = loggedIn ? "/home/products" : "/products";
 
   const results = useMemo(() => filterProducts(filter, query), [filter, query]);
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
@@ -70,7 +71,7 @@ export default function ProductsCatalog({ initialFilter = "all" }: { initialFilt
             {visible.length > 0 ? (
               <div className="grid grid-cols-3 gap-[40px] max-desktop:gap-[24px] max-notebook:grid-cols-2 max-tablet:grid-cols-1 max-tablet:gap-y-[48px]">
                 {visible.map((product) => (
-                  <CatalogProductCard key={product.id} product={product} />
+                  <CatalogProductCard key={product.id} product={product} href={`${productsBase}/${product.slug}`} />
                 ))}
               </div>
             ) : (

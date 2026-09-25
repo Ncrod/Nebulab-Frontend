@@ -18,6 +18,8 @@ export type CatalogFilter = "all" | "new" | Category;
 
 export interface CatalogProduct {
   id: number;
+  /** URL segment of the product page: /products/<slug>. */
+  slug: string;
   name: string;
   category: Category;
   price: number;
@@ -84,6 +86,16 @@ const byCategory: Record<Category, { name: string; price: number; isNew?: boolea
   ],
 };
 
+/** "MacBook Air 13" M4" -> "macbook-air-13-m4". */
+function slugify(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 // Interleave the categories (one of each per round) so the unfiltered list, and every page of it,
 // mixes them instead of listing one category after another.
 function buildProducts(): CatalogProduct[] {
@@ -96,6 +108,7 @@ function buildProducts(): CatalogProduct[] {
       if (item) {
         products.push({
           id: products.length + 1,
+          slug: slugify(item.name),
           name: item.name,
           category: item.category,
           price: item.price,
@@ -109,6 +122,11 @@ function buildProducts(): CatalogProduct[] {
 }
 
 export const PRODUCTS: CatalogProduct[] = buildProducts();
+
+/** The product behind a /products/<slug> URL, or undefined (the page then answers 404). */
+export function getProductBySlug(slug: string): CatalogProduct | undefined {
+  return PRODUCTS.find((product) => product.slug === slug);
+}
 
 /** Lowercase, no accents: "Hermès" matches "hermes". */
 function normalize(text: string) {
