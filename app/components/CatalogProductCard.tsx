@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { CatalogProduct } from "../data/catalog";
 
-/** Catalog product tile: photo, name, category, price and the two actions. Static for now. */
+/** Catalog product tile: photo, name, category, price and a "Buy now" link to the product page. */
 export default function CatalogProductCard({ product, href }: { product: CatalogProduct; href: string }) {
   const { name, category, price, image } = product;
 
@@ -36,20 +36,13 @@ export default function CatalogProductCard({ product, href }: { product: Catalog
           </div>
         </div>
 
-        <div className="flex items-center gap-[20px] max-desktop:gap-[12px]">
-          <button
-            type="button"
-            className="flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[200px] border-2 border-white/60 px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-white max-desktop:px-[12px] max-desktop:text-[16px]"
-          >
-            Add to cart
-          </button>
-          <button
-            type="button"
-            className="flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background max-desktop:px-[12px] max-desktop:text-[16px]"
-          >
-            Buy now
-          </button>
-        </div>
+        {/* Adding needs the product's attributes chosen, so the only action here is to open its page. */}
+        <Link
+          href={href}
+          className="flex w-full items-center justify-center whitespace-nowrap rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background transition-opacity duration-200 hover:opacity-80 max-desktop:text-[16px]"
+        >
+          Buy now
+        </Link>
       </div>
     </article>
   );
