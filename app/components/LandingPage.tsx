@@ -13,7 +13,7 @@ export default function LandingPage({ loggedIn = false }: { loggedIn?: boolean }
       <Navbar loggedIn={loggedIn} />
       <Hero />
       <Categories loggedIn={loggedIn} />
-      <Featured />
+      <Featured loggedIn={loggedIn} />
       <Benefits />
       <Offer />
       <Footer loggedIn={loggedIn} />

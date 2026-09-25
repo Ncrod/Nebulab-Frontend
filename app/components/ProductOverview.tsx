@@ -2,11 +2,6 @@ import Image from "next/image";
 import type { CatalogProduct } from "../data/catalog";
 import ProductPurchase from "./ProductPurchase";
 
-// Placeholder copy from the design: the product data will bring its own once the backend exists. (The options, on the other hand,
-// are already per product: see `options` in ../data/catalog.)
-const DESCRIPTION =
-  "Our most advanced series of chips ever built for a pro laptop. Each chip in the M5 family delivers phenomenal single- and multithreaded CPU performance and faster unified memory.";
-
 const perks = [
   { icon: "/svg/product/shipping.svg", text: "Shop your favorite Apple products and enjoy complimentary shipping on orders over $200." },
   { icon: "/svg/product/returns.svg", text: "Hassle-free returns for a simple, worry-free shopping experience." },
@@ -68,7 +63,7 @@ export default function ProductOverview({ product, loggedIn = false }: { product
                 <h1 className="font-display text-[60px] font-medium leading-[1.045] text-black max-desktop:text-[48px] max-tablet:text-[30px]">
                   {product.name}
                 </h1>
-                <p className="font-sans text-[24px] leading-normal text-black/75 max-desktop:text-[20px] max-tablet:text-[18px]">{DESCRIPTION}</p>
+                <p className="font-sans text-[24px] leading-normal text-black/75 max-desktop:text-[20px] max-tablet:text-[18px]">{product.description}</p>
               </div>
               <p className="font-sans text-[40px] font-medium leading-[1.045] text-black max-tablet:text-[30px]">${product.price}</p>
             </div>

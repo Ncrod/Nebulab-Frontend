@@ -1,7 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import type { CartItem } from "../lib/cart";
+import { findCustomerByEmail, readCustomers } from "../lib/cms/customers";
+import { placeOrder } from "../lib/cms/orders";
+import { showToast } from "../lib/toast";
 
 const label = "font-display text-[20px] font-medium leading-[22.5px] text-[#050505]";
 const frame = "flex items-center rounded-[12px] border border-[#050505] px-[15px]";
@@ -21,14 +25,45 @@ function formatExpiry(value: string) {
   return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 }
 
-/** Payment details: contact and card fields (design only for now), the totals and the pay button. */
-export default function BagPayment({ subtotal, taxRate }: { subtotal: number; taxRate: number }) {
+/**
+ * Payment details: contact and card fields, the totals and the pay button. Paying is a mock: it checks the fields, then
+ * records the order in the CMS store (../lib/cms/orders) and empties the bag. No card data is kept but the last 4 digits.
+ */
+export default function BagPayment({ items, subtotal, taxRate }: { items: CartItem[]; subtotal: number; taxRate: number }) {
+  const [email, setEmail] = useState("");
+  const [holder, setHolder] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
   const empty = subtotal === 0;
+
+  function problem(): string | null {
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Enter a valid email address.";
+    if (digitsOnly(cardNumber, 16).length !== 16) return "Enter the 16 digits of your card.";
+    if (digitsOnly(expiry, 4).length !== 4) return "Enter the expiry date as MM/YY.";
+    if (cvc.length !== 3) return "Enter the 3-digit security code.";
+    if (!holder.trim()) return "Enter the name on the card.";
+    if (findCustomerByEmail(readCustomers(), email)?.status === "blocked") return "This account can't place orders. Contact support.";
+    return null;
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (empty) return;
+    const message = problem();
+    setError(message);
+    if (message) return;
+    const order = placeOrder({ name: holder.trim(), email, cardLast4: cardNumber.slice(-4), items });
+    showToast(`Order ${order.number} placed`);
+    setEmail("");
+    setHolder("");
+    setCardNumber("");
+    setExpiry("");
+    setCvc("");
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-[57px] max-notebook:gap-[36px]">
@@ -39,13 +74,13 @@ export default function BagPayment({ subtotal, taxRate }: { subtotal: number; ta
         </p>
       </div>
 
-      <form onSubmit={(e) => e.preventDefault()} className="flex w-full max-w-[572px] flex-col gap-[23px] max-notebook:max-w-none">
+      <form onSubmit={handleSubmit} noValidate className="flex w-full max-w-[572px] flex-col gap-[23px] max-notebook:max-w-none">
         <div className="flex flex-col gap-[19px]">
           <div className="flex flex-col gap-[15px]">
             <label htmlFor="bag-email" className={label}>
               Email Address
             </label>
-            <input id="bag-email" type="email" autoComplete="email" placeholder="your@email.com" className={`${frame} ${field} w-full py-[20px]`} />
+            <input id="bag-email" type="email" autoComplete="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
           </div>
 
           <div className="flex flex-col gap-[15px]">
@@ -99,7 +134,7 @@ export default function BagPayment({ subtotal, taxRate }: { subtotal: number; ta
             <label htmlFor="bag-holder" className={label}>
               Card Holder
             </label>
-            <input id="bag-holder" autoComplete="cc-name" placeholder="Name" className={`${frame} ${field} w-full py-[20px]`} />
+            <input id="bag-holder" autoComplete="cc-name" placeholder="Name" value={holder} onChange={(e) => setHolder(e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
           </div>
         </div>
 
@@ -118,6 +153,12 @@ export default function BagPayment({ subtotal, taxRate }: { subtotal: number; ta
               <dd className="m-0">{money(total)}</dd>
             </div>
           </dl>
+
+          {error && (
+            <p role="alert" className="m-0 font-sans text-[16px] leading-normal text-[#c62828]">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"

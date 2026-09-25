@@ -3,10 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "../lib/cart";
+import { TAX_RATE } from "../lib/cms/orders";
 import BagItem from "./BagItem";
 import BagPayment from "./BagPayment";
-
-const TAX_RATE = 0.08;
 
 /**
  * Bag page, section 2 (Figma 145:855): the white card with the order summary (the cart's lines, with quantities)
@@ -74,7 +73,7 @@ export default function BagCheckout() {
 
           {/* Right: payment details */}
           <div className="min-w-0 flex-[572] max-notebook:flex-none">
-            <BagPayment subtotal={subtotal} taxRate={TAX_RATE} />
+            <BagPayment items={items} subtotal={subtotal} taxRate={TAX_RATE} />
           </div>
         </div>
       </div>

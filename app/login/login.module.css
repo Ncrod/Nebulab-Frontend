@@ -332,3 +332,11 @@
     display: block;
   }
 }
+
+/* Admin login: a wrong email/password message under the fields. */
+.error {
+  margin: -4px 0 0;
+  font-size: 15px;
+  line-height: 22.5px;
+  color: #ff8a80;
+}

@@ -36,7 +36,8 @@ function activeIndexFor(pathname: string) {
 
 export default function SideNav() {
   const pathname = usePathname();
-  const onLogin = pathname.startsWith("/login");
+  // The login screens and the CMS (/admin) have their own full-screen layout.
+  const onLogin = pathname.startsWith("/login") || pathname === "/admin" || pathname.startsWith("/admin/");
   const loggedIn = isSignedInPath(pathname);
   const activeIndex = activeIndexFor(pathname);
 

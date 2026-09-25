@@ -1,5 +1,6 @@
-// Mock catalog data. The real one will come from the backend; keep this file as the single place the
-// catalog UI reads products, categories and the page size from.
+// Mock catalog data. The real one will come from the backend. This file holds the SEED of the catalog (what the
+// store starts with) and the pure helpers; at runtime the products live in the CMS store (../lib/cms/products),
+// which starts from this seed and is what the admin edits and the shop reads.
 
 export const CATEGORIES = [
   "Iphone",
@@ -24,6 +25,9 @@ export interface ProductOption {
   layout?: "stack" | "wrap";
 }
 
+/** "live" products show in the shop; "disabled" ones only exist in the CMS. */
+export type ProductStatus = "live" | "disabled";
+
 export interface CatalogProduct {
   id: number;
   /** URL segment of the product page: /products/<slug>. */
@@ -33,11 +37,26 @@ export interface CatalogProduct {
   price: number;
   image: string;
   isNew: boolean;
+  /** Shows in the carousel of the home page ("Selected to upgrade your day"). */
+  recommended: boolean;
   /** What must be chosen before adding it to the bag. Empty when the product has no attributes. */
   options: ProductOption[];
+  status: ProductStatus;
+  /** Units in stock (per product, not per option combination). 0 = sold out. */
+  stock: number;
+  description: string;
+  /** ISO 8601 timestamps. */
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const PAGE_SIZE = 9;
+
+/** Stock at or under this is flagged as "low" in the CMS. */
+export const LOW_STOCK = 5;
+
+export const DEFAULT_DESCRIPTION =
+  "Our most advanced series of chips ever built for a pro laptop. Each chip in the M5 family delivers phenomenal single- and multithreaded CPU performance and faster unified memory.";
 
 /** Reads the `?category=` value of a link into a filter: a category name (any case), "new", or everything. */
 export function parseFilter(value: string | undefined): CatalogFilter {
@@ -103,7 +122,7 @@ const byCategory: Record<Category, { name: string; price: number; isNew?: boolea
 };
 
 /** "MacBook Air 13" M4" -> "macbook-air-13-m4". */
-function slugify(name: string) {
+export function slugify(name: string) {
   return name
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -111,6 +130,11 @@ function slugify(name: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+/** Products the home carousel shows out of the box. */
+const SEED_RECOMMENDED = ["ipad-pro-13", "iphone-18-pro-max", "apple-watch-ultra-3", "airpods-pro-2-gen", "macbook-air-13-m4"];
+
+const SEED_DATE = "2026-01-15T12:00:00.000Z";
 
 // Interleave the categories (one of each per round) so the unfiltered list, and every page of it,
 // mixes them instead of listing one category after another.
@@ -122,15 +146,23 @@ function buildProducts(): CatalogProduct[] {
     for (const queue of queues) {
       const item = queue[round];
       if (item) {
+        const slug = slugify(item.name);
         products.push({
           id: products.length + 1,
-          slug: slugify(item.name),
+          slug,
           name: item.name,
           category: item.category,
           price: item.price,
           image: IMAGE,
           isNew: item.isNew ?? false,
+          recommended: SEED_RECOMMENDED.includes(slug),
           options: item.options ?? [],
+          status: "live",
+          // Deterministic, so the server and the browser seed the same numbers (a couple of products start low).
+          stock: (products.length + 1) % 9 === 0 ? 3 : 8 + ((products.length * 7) % 43),
+          description: DEFAULT_DESCRIPTION,
+          createdAt: SEED_DATE,
+          updatedAt: SEED_DATE,
         });
       }
     }
@@ -138,11 +170,12 @@ function buildProducts(): CatalogProduct[] {
   return products;
 }
 
-export const PRODUCTS: CatalogProduct[] = buildProducts();
+/** What the catalog starts with. Runtime code reads the CMS store instead (../lib/cms/products). */
+export const SEED_PRODUCTS: CatalogProduct[] = buildProducts();
 
-/** The product behind a /products/<slug> URL, or undefined (the page then answers 404). */
-export function getProductBySlug(slug: string): CatalogProduct | undefined {
-  return PRODUCTS.find((product) => product.slug === slug);
+/** A product of the seed by slug: only for server-rendered metadata. The pages read the CMS store. */
+export function getSeedProductBySlug(slug: string): CatalogProduct | undefined {
+  return SEED_PRODUCTS.find((product) => product.slug === slug);
 }
 
 /** Lowercase, no accents: "Hermès" matches "hermes". */
@@ -151,9 +184,9 @@ function normalize(text: string) {
 }
 
 /** Products that match the sidebar filter and every word of the search text. */
-export function filterProducts(filter: CatalogFilter, query: string): CatalogProduct[] {
+export function filterProducts(products: CatalogProduct[], filter: CatalogFilter, query: string): CatalogProduct[] {
   const words = normalize(query).split(/\s+/).filter(Boolean);
-  return PRODUCTS.filter((product) => {
+  return products.filter((product) => {
     if (filter === "new" && !product.isNew) return false;
     if (filter !== "all" && filter !== "new" && product.category !== filter) return false;
     const haystack = normalize(`${product.name} ${product.category}`);

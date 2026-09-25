@@ -1,53 +1,46 @@
+"use client";
+
 import Image from "next/image";
+import { useLiveProducts } from "../lib/cms/products";
 import ProductCarousel from "./ProductCarousel";
 import type { Product } from "./ProductCard";
 
 const cardImage = "absolute inset-0 size-full object-cover";
 
-const products: Product[] = [
-  {
-    name: "Ipad pro",
-    price: 1199,
-    href: "/products/ipad-pro",
-    image: "/images/products/ipad-pro.png",
-    frameClassName: "left-px top-[-17px] size-[348px]",
-    imageClassName: cardImage,
-  },
-  {
-    name: "iPhone 18 Pro Max",
-    price: 1199,
-    href: "/products/iphone-18-pro-max",
-    image: "/images/products/iphone.png",
-    frameClassName: "left-px top-[-17px] size-[348px]",
-    imageClassName: cardImage,
-  },
-  {
-    name: "Watch Ultra",
-    price: 1199,
-    href: "/products/watch-ultra",
+// The home carousel shows the products marked "Recommended" in the CMS. These five have their own cut-out art, cropped
+// by hand; any other product uses its catalog photo (a wide render) with the same crop as the catalog cards.
+const ART: Record<string, Pick<Product, "image" | "frameClassName" | "imageClassName">> = {
+  "ipad-pro-13": { image: "/images/products/ipad-pro.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
+  "iphone-18-pro-max": { image: "/images/products/iphone.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
+  "apple-watch-ultra-3": {
     image: "/images/products/watch-ultra.png",
     frameClassName: "left-[49.5px] top-[15px] h-[283px] w-[249px] overflow-hidden",
     imageClassName: "absolute left-0 top-[-5.12%] h-[109.27%] w-full",
   },
-  {
-    name: "Airpods Pro",
-    price: 1199,
-    href: "/products/airpods-pro",
+  "airpods-pro-2-gen": {
     image: "/images/products/airpods-pro.png",
     frameClassName: "left-[30.5px] top-[41px] h-[232.39px] w-[288.727px] overflow-hidden",
     imageClassName: "absolute left-[-54.05%] top-[-13.28%] h-[145.45%] w-[208.13%]",
   },
-  {
-    name: "Mackbook Air",
-    price: 1199,
-    href: "/products/macbook-air",
-    image: "/images/products/macbook-air.png",
-    frameClassName: "left-px top-[-17px] size-[348px]",
-    imageClassName: cardImage,
-  },
-];
+  "macbook-air-13-m4": { image: "/images/products/macbook-air.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
+};
 
-export default function Featured() {
+const WIDE_RENDER = {
+  frameClassName: "left-[30.5px] top-[41px] h-[232.39px] w-[288.727px] overflow-hidden",
+  imageClassName: "absolute left-[-54.05%] top-[-13.28%] h-[145.45%] w-[208.13%]",
+};
+
+export default function Featured({ loggedIn = false }: { loggedIn?: boolean }) {
+  const productsBase = loggedIn ? "/home/products" : "/products";
+  const products: Product[] = useLiveProducts()
+    .filter((product) => product.recommended)
+    .map((product) => ({
+      name: product.name,
+      price: product.price,
+      href: `${productsBase}/${product.slug}`,
+      ...(ART[product.slug] ?? { image: product.image, ...WIDE_RENDER }),
+    }));
+
   return (
     <section className="relative flex flex-col items-center overflow-x-clip pb-[134px] pt-[93px]">
       {/* Planet horizon, fading in from the top */}
@@ -81,7 +74,8 @@ export default function Featured() {
           </span>
         </h2>
         </div>
-        <ProductCarousel products={products} />
+        {/* The carousel needs at least one card; with none marked "Recommended" only the heading stays. */}
+        {products.length > 0 && <ProductCarousel key={products.map((p) => p.href).join()} products={products} />}
       </div>
     </section>
   );

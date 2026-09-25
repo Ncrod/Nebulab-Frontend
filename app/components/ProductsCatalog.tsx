@@ -3,6 +3,7 @@
 import { useLenis } from "lenis/react";
 import { useMemo, useRef, useState } from "react";
 import { PAGE_SIZE, filterProducts, type CatalogFilter } from "../data/catalog";
+import { useLiveProducts } from "../lib/cms/products";
 import CatalogPagination from "./CatalogPagination";
 import CatalogProductCard from "./CatalogProductCard";
 import CatalogSearch from "./CatalogSearch";
@@ -10,7 +11,7 @@ import CatalogSidebar from "./CatalogSidebar";
 
 /**
  * Products page, section 3 (Figma 96:382): search, category list, product grid and pager.
- * Filtering, search and paging run on the mock data in ../data/catalog; the backend will replace that.
+ * Filtering, search and paging run on the products of the CMS store (../lib/cms/products): only the live ones show here.
  */
 export default function ProductsCatalog({ initialFilter = "all", loggedIn = false }: { initialFilter?: CatalogFilter; loggedIn?: boolean }) {
   const [filter, setFilter] = useState<CatalogFilter>(initialFilter);
@@ -20,7 +21,9 @@ export default function ProductsCatalog({ initialFilter = "all", loggedIn = fals
   const lenis = useLenis();
   const productsBase = loggedIn ? "/home/products" : "/products";
 
-  const results = useMemo(() => filterProducts(filter, query), [filter, query]);
+  const products = useLiveProducts();
+
+  const results = useMemo(() => filterProducts(products, filter, query), [products, filter, query]);
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const visible = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 

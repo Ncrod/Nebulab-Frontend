@@ -101,6 +101,11 @@ export function changeQuantity(id: string, delta: number) {
   save(items);
 }
 
+/** Empties the cart (after an order is placed). */
+export function clearCart() {
+  save(EMPTY);
+}
+
 /** The cart lines, live: components re-render when anything adds to the cart. */
 export function useCart(): CartItem[] {
   return useSyncExternalStore(subscribe, read, () => EMPTY);

@@ -44,7 +44,8 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
   useEffect(() => () => clearTimeout(addedTimer.current), []);
 
   const missing = product.options.filter((option) => chosen[option.name] === undefined);
-  const complete = missing.length === 0;
+  const soldOut = product.stock <= 0;
+  const complete = missing.length === 0 && !soldOut;
 
   function addCurrent() {
     if (!complete) return; // the buttons are disabled too; this keeps the rule even if one is triggered another way
@@ -107,7 +108,7 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
           {loggedIn ? (
             <>
               <button type="button" onClick={handleAdd} disabled={!complete} aria-describedby={complete ? undefined : "purchase-hint"} className={`${addStyle} ${asButton}`}>
-                {added ? "Added to cart" : "Add to cart"}
+                {soldOut ? "Sold out" : added ? "Added to cart" : "Add to cart"}
               </button>
               <button type="button" onClick={handleBuy} disabled={!complete} aria-describedby={complete ? undefined : "purchase-hint"} className={`${buyStyle} ${asButton}`}>
                 Buy now
@@ -127,7 +128,7 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
 
         {loggedIn && !complete && (
           <p id="purchase-hint" className="font-sans text-[16px] leading-normal text-black/60">
-            Choose {listOf(missing.map((option) => option.name))} to add this product to your bag.
+            {soldOut ? "This product is sold out for now." : `Choose ${listOf(missing.map((option) => option.name))} to add this product to your bag.`}
           </p>
         )}
       </div>
