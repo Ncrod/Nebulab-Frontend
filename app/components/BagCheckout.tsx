@@ -38,7 +38,7 @@ export default function BagCheckout() {
 
       {/* From the desktop breakpoint up to 1770px the fixed side nav would cover the left edge, so it gets room. */}
       <div className="relative mx-auto w-full max-w-[1540px] px-section pt-[116px] desktop:max-[1770px]:pl-[110px] max-notebook:pt-[40px] max-tablet:pt-[24px]">
-        <div className="flex items-stretch justify-center gap-[86px] overflow-clip rounded-[31px] bg-white p-[80px] max-desktop:gap-[48px] max-desktop:p-[48px] notebook:h-[1083px] max-notebook:mx-auto max-notebook:max-w-[720px] max-notebook:flex-col max-notebook:gap-[48px] max-tablet:max-w-[550px] max-tablet:rounded-[20px] max-tablet:p-[20px] max-tablet:pb-[50px]">
+        <div className="flex items-stretch justify-center gap-[86px] overflow-clip rounded-[31px] bg-white p-[80px] max-desktop:gap-[48px] max-desktop:p-[48px] notebook:min-h-[1083px] max-notebook:mx-auto max-notebook:max-w-[720px] max-notebook:flex-col max-notebook:gap-[48px] max-tablet:max-w-[550px] max-tablet:rounded-[20px] max-tablet:p-[20px] max-tablet:pb-[50px]">
           {/* Left: order summary */}
           <div className="flex min-h-0 min-w-0 flex-[695] flex-col gap-[45px] max-notebook:flex-none max-notebook:gap-[24px]">
             <div className="flex flex-col gap-[15px] pb-[21px] max-notebook:pb-0">

@@ -38,6 +38,15 @@ export interface OrderLine {
   options: ChosenOption[];
 }
 
+/** Where an order is sent (asked at checkout). */
+export interface ShippingAddress {
+  /** Street and number. */
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
 export interface Order {
   id: string;
   /** What people read and search: "NB-1042". */
@@ -52,7 +61,8 @@ export interface Order {
   tax: number;
   total: number;
   status: OrderStatus;
-  /** Only the last four digits of the card are ever kept. */
+  shippingAddress: ShippingAddress;
+  /** The payment is simulated: only the last four digits of the fake card are kept, to show them in the CMS. */
   cardLast4: string;
   createdAt: string;
   updatedAt: string;

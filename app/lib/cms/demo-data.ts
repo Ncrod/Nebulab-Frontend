@@ -1,5 +1,5 @@
 import { SEED_PRODUCTS } from "../../data/catalog";
-import type { Customer, Order, OrderLine, OrderStatus } from "./types";
+import type { Customer, Order, OrderLine, OrderStatus, ShippingAddress } from "./types";
 
 // Made-up customers and orders so the dashboard has something to show the first time the CMS opens.
 // Deterministic (seeded random), relative to "today". The backend will replace all of it with real rows.
@@ -19,6 +19,28 @@ function mulberry32(seed: number) {
 
 const FIRST = ["Ivan", "Camila", "Mateo", "Valentina", "Santiago", "Sofia", "Daniel", "Laura", "Andres", "Isabella", "Lucas", "Mariana", "Felipe", "Juliana", "Sebastian", "Natalia", "Tomas", "Paula", "Nicolas", "Daniela", "Emilio", "Carolina", "Diego", "Manuela", "Samuel", "Gabriela"];
 const LAST = ["Mateo", "Rojas", "Herrera", "Gomez", "Castro", "Vargas", "Moreno", "Ortiz", "Silva", "Navarro", "Cruz", "Mendez", "Rios", "Salazar", "Pardo", "Duarte"];
+const PLACES: [string, string][] = [
+  ["Colombia", "Bogota"],
+  ["Colombia", "Medellin"],
+  ["Mexico", "Mexico City"],
+  ["Spain", "Madrid"],
+  ["Argentina", "Buenos Aires"],
+  ["Chile", "Santiago"],
+  ["United States", "Miami"],
+  ["Peru", "Lima"],
+];
+const STREETS = ["Calle 10", "Carrera 7", "Avenida Central", "Calle Real", "Paseo del Sol", "Avenida Libertad"];
+
+function makeAddress(random: () => number): ShippingAddress {
+  const [country, city] = pick(random, PLACES);
+  return {
+    address: `${pick(random, STREETS)} #${10 + Math.floor(random() * 90)}-${10 + Math.floor(random() * 90)}`,
+    city,
+    postalCode: String(10000 + Math.floor(random() * 89999)),
+    country,
+  };
+}
+
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -93,6 +115,7 @@ export function getDemoData() {
         tax,
         total: round2(subtotal + tax),
         status,
+        shippingAddress: makeAddress(random),
         cardLast4: String(Math.floor(random() * 9000) + 1000),
         createdAt,
         updatedAt: createdAt,

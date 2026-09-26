@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import type { CartItem } from "../lib/cart";
-import { findCustomerByEmail, readCustomers } from "../lib/cms/customers";
+import { isExpiryValid } from "../lib/cms/card";
+import { findCustomerByEmail, useCustomers } from "../lib/cms/customers";
 import { placeOrder } from "../lib/cms/orders";
 import { showToast } from "../lib/toast";
 
@@ -16,8 +17,8 @@ const money = (amount: number) => `$ ${amount.toFixed(2)}`;
 
 const digitsOnly = (value: string, max: number) => value.replace(/\D/g, "").slice(0, max);
 
-/** "1234567812345678" -> "1234-5678-1234-5678" (a separator only appears between digits, so it can be deleted). */
-const formatCardNumber = (value: string) => (digitsOnly(value, 16).match(/.{1,4}/g) ?? []).join("-");
+/** "1234567812345678" -> "1234 5678 1234 5678" (a space only appears between digits, so it can be deleted). */
+const formatCardNumber = (value: string) => (digitsOnly(value, 16).match(/.{1,4}/g) ?? []).join(" ");
 
 /** "1226" -> "12/26" (the slash appears with the third digit, so it can be deleted). */
 function formatExpiry(value: string) {
@@ -26,39 +27,60 @@ function formatExpiry(value: string) {
 }
 
 /**
- * Payment details: contact and card fields, the totals and the pay button. Paying is a mock: it checks the fields, then
- * records the order in the CMS store (../lib/cms/orders) and empties the bag. No card data is kept but the last 4 digits.
+ * Payment details: contact and card fields, the totals and the pay button. Paying is a mock: the button only works once
+ * every field is complete and valid (email, 16-digit card, a valid unexpired MM/YY, 3-digit code, holder); then it records
+ * the order in the CMS store (../lib/cms/orders) and empties the bag. No card data is kept but the last 4 digits.
  */
 export default function BagPayment({ items, subtotal, taxRate }: { items: CartItem[]; subtotal: number; taxRate: number }) {
   const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("");
   const [holder, setHolder] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Until the shopper types something the hint is generic; after that it names the next thing that is missing.
+  const [touched, setTouched] = useState(false);
+  const customers = useCustomers();
+  const edit = (setter: (value: string) => void, value: string) => {
+    setTouched(true);
+    setter(value);
+  };
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
   const empty = subtotal === 0;
 
-  function problem(): string | null {
+  /** What is still wrong with the form, or null when it is complete. */
+  const missing = (() => {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Enter a valid email address.";
+    if (!address.trim()) return "Enter your shipping address.";
+    if (!city.trim()) return "Enter your city.";
+    if (!postalCode.trim()) return "Enter your postal code.";
+    if (!country.trim()) return "Enter your country.";
     if (digitsOnly(cardNumber, 16).length !== 16) return "Enter the 16 digits of your card.";
     if (digitsOnly(expiry, 4).length !== 4) return "Enter the expiry date as MM/YY.";
+    if (!isExpiryValid(expiry)) return "That expiry date is not valid or the card has expired.";
     if (cvc.length !== 3) return "Enter the 3-digit security code.";
     if (!holder.trim()) return "Enter the name on the card.";
-    if (findCustomerByEmail(readCustomers(), email)?.status === "blocked") return "This account can't place orders. Contact support.";
     return null;
-  }
+  })();
+  const blocked = missing === null && findCustomerByEmail(customers, email)?.status === "blocked";
+  const ready = !empty && missing === null && !blocked;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (empty) return;
-    const message = problem();
-    setError(message);
-    if (message) return;
-    const order = placeOrder({ name: holder.trim(), email, cardLast4: cardNumber.slice(-4), items });
+    if (!ready) return;
+    const shipping = { address: address.trim(), city: city.trim(), postalCode: postalCode.trim(), country: country.trim() };
+    const order = placeOrder({ name: holder.trim(), email, shipping, cardLast4: cardNumber.slice(-4), items });
     showToast(`Order ${order.number} placed`);
+    setTouched(false);
     setEmail("");
+    setAddress("");
+    setCity("");
+    setPostalCode("");
+    setCountry("");
     setHolder("");
     setCardNumber("");
     setExpiry("");
@@ -80,7 +102,22 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
             <label htmlFor="bag-email" className={label}>
               Email Address
             </label>
-            <input id="bag-email" type="email" autoComplete="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
+            <input id="bag-email" type="email" autoComplete="email" placeholder="your@email.com" value={email} onChange={(e) => {
+              setTouched(true);
+              setEmail(e.target.value);
+            }} className={`${frame} ${field} w-full py-[20px]`} />
+          </div>
+
+          <div className="flex flex-col gap-[15px]">
+            <label htmlFor="bag-address" className={label}>
+              Shipping Address
+            </label>
+            <input id="bag-address" autoComplete="street-address" placeholder="Street and number" value={address} onChange={(e) => edit(setAddress, e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
+            <div className="flex gap-[15px] max-[460px]:flex-col">
+              <input aria-label="City" autoComplete="address-level2" placeholder="City" value={city} onChange={(e) => edit(setCity, e.target.value)} className={`${frame} ${field} min-w-0 flex-1 py-[20px]`} />
+              <input aria-label="Postal code" autoComplete="postal-code" placeholder="Postal code" value={postalCode} onChange={(e) => edit(setPostalCode, e.target.value)} className={`${frame} ${field} w-[190px] py-[20px] max-[460px]:w-full`} />
+            </div>
+            <input aria-label="Country" autoComplete="country-name" placeholder="Country" value={country} onChange={(e) => edit(setCountry, e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
           </div>
 
           <div className="flex flex-col gap-[15px]">
@@ -95,10 +132,13 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
                   id="bag-card"
                   inputMode="numeric"
                   autoComplete="cc-number"
-                  placeholder="Card Number"
+                  placeholder="XXXX XXXX XXXX XXXX"
                   maxLength={19}
                   value={cardNumber}
-                  onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                  onChange={(e) => {
+                    setTouched(true);
+                    setCardNumber(formatCardNumber(e.target.value));
+                  }}
                   className={`${field} w-full max-[460px]:text-[14px]`}
                 />
               </div>
@@ -110,7 +150,10 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
                   placeholder="MM/YY"
                   maxLength={5}
                   value={expiry}
-                  onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                  onChange={(e) => {
+                    setTouched(true);
+                    setExpiry(formatExpiry(e.target.value));
+                  }}
                   className={`${field} w-[64px] max-[460px]:w-[48px] max-[460px]:text-[14px]`}
                 />
                 <div aria-hidden="true" className="flex h-[29px] w-0 shrink-0 items-center justify-center">
@@ -123,7 +166,10 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
                   placeholder="CVC"
                   maxLength={3}
                   value={cvc}
-                  onChange={(e) => setCvc(digitsOnly(e.target.value, 3))}
+                  onChange={(e) => {
+                    setTouched(true);
+                    setCvc(digitsOnly(e.target.value, 3));
+                  }}
                   className={`${field} w-[40px] max-[460px]:w-[30px] max-[460px]:text-[14px]`}
                 />
               </div>
@@ -134,7 +180,10 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
             <label htmlFor="bag-holder" className={label}>
               Card Holder
             </label>
-            <input id="bag-holder" autoComplete="cc-name" placeholder="Name" value={holder} onChange={(e) => setHolder(e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
+            <input id="bag-holder" autoComplete="cc-name" placeholder="Name" value={holder} onChange={(e) => {
+              setTouched(true);
+              setHolder(e.target.value);
+            }} className={`${frame} ${field} w-full py-[20px]`} />
           </div>
         </div>
 
@@ -154,15 +203,21 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
             </div>
           </dl>
 
-          {error && (
+          {blocked && (
             <p role="alert" className="m-0 font-sans text-[16px] leading-normal text-[#c62828]">
-              {error}
+              This account can&apos;t place orders. Contact support.
+            </p>
+          )}
+          {!empty && missing && (
+            <p id="pay-hint" className="m-0 font-sans text-[16px] leading-normal text-black/60">
+              {touched ? missing : "Fill in all the payment details to pay."}
             </p>
           )}
 
           <button
             type="submit"
-            disabled={empty}
+            disabled={!ready}
+            aria-describedby={!empty && missing ? "pay-hint" : undefined}
             className="flex w-full cursor-pointer items-center justify-center whitespace-nowrap rounded-[200px] bg-[#050505] px-[31px] py-[23px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-white transition-opacity duration-200 hover:opacity-80 disabled:cursor-default disabled:opacity-40"
           >
             Pay {money(total)}

@@ -204,6 +204,14 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
           <p className="m-0 text-[14px] text-[#98a2b3]">{order.customerEmail}</p>
         </section>
 
+        <section aria-label="Shipping address" className="flex flex-col gap-[4px] rounded-[12px] border border-white/[0.08] p-[16px] font-sans">
+          <p className="m-0 text-[13px] text-[#98a2b3]">Ship to</p>
+          <p className="m-0 text-[16px] text-white">{order.shippingAddress.address}</p>
+          <p className="m-0 text-[14px] text-[#98a2b3]">
+            {order.shippingAddress.city}, {order.shippingAddress.postalCode} · {order.shippingAddress.country}
+          </p>
+        </section>
+
         <section aria-label="Items" className="flex flex-col gap-[4px]">
           <h3 className="m-0 mb-[6px] font-display text-[15px] font-medium text-white">Items</h3>
           <ul className="m-0 flex list-none flex-col p-0">

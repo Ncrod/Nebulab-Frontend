@@ -5,11 +5,11 @@ import { findOrCreateCustomer } from "./customers";
 import { TAX_RATE, getDemoData } from "./demo-data";
 import { adjustStock, readProducts } from "./products";
 import { createStore } from "./store";
-import type { Order, OrderLine, OrderStatus } from "./types";
+import type { Order, OrderLine, OrderStatus, ShippingAddress } from "./types";
 
 export { TAX_RATE };
 
-const store = createStore<Order[]>("nebulab-cms-orders", () => getDemoData().orders, []);
+const store = createStore<Order[]>("nebulab-cms-orders-v2", () => getDemoData().orders, []);
 
 export const useOrders = store.use;
 export const readOrders = store.read;
@@ -20,6 +20,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export interface CheckoutInput {
   name: string;
   email: string;
+  shipping: ShippingAddress;
   cardLast4: string;
   items: CartItem[];
 }
@@ -28,7 +29,7 @@ export interface CheckoutInput {
  * The shop's "Pay": creates the order (and the customer, if this email is new), takes the units out of the stock
  * and empties the bag. The backend will do all of this in one transaction.
  */
-export function placeOrder({ name, email, cardLast4, items }: CheckoutInput): Order {
+export function placeOrder({ name, email, shipping, cardLast4, items }: CheckoutInput): Order {
   const now = new Date().toISOString();
   const products = readProducts();
 
@@ -63,6 +64,7 @@ export function placeOrder({ name, email, cardLast4, items }: CheckoutInput): Or
     tax,
     total: round2(subtotal + tax),
     status: "paid",
+    shippingAddress: shipping,
     cardLast4,
     createdAt: now,
     updatedAt: now,
