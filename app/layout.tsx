@@ -9,6 +9,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Nebulab",
   description: "Tienda de dispositivos Apple",
+  icons: {
+    icon: { url: "/svg/favicon.svg", type: "image/svg+xml" },
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
