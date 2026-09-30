@@ -25,11 +25,9 @@ export default function BagItem({ item }: { item: CartItem }) {
 
   return (
     <li className="flex items-center gap-[34px] overflow-clip border-b border-black/[0.26] px-[42px] py-[26px] first:border-t max-notebook:px-[8px] max-tablet:gap-[16px] max-tablet:py-[18px]">
-      <div className="relative h-[134px] w-[106px] shrink-0 overflow-clip rounded-[10px] bg-[#efefef] max-tablet:h-[110px] max-tablet:w-[88px]">
-        {/* The photo has wide transparent margins: it is drawn larger than the frame so the product fills it. */}
-        <div className="absolute left-1/2 top-1/2 size-[190%] -translate-x-1/2 -translate-y-1/2">
-          <Image src={item.image} alt={item.name} fill sizes="200px" quality={90} className="object-contain" />
-        </div>
+      <div className="relative h-[134px] w-[106px] shrink-0 overflow-clip rounded-[10px] bg-[#F6F5F8] max-tablet:h-[110px] max-tablet:w-[88px]">
+        {/* The photo is shown whole and centred (fit, not cropped), with a small margin. */}
+        <Image src={item.image} alt={item.name} fill sizes="200px" quality={90} className="object-contain p-[6px]" />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-[10px]">

@@ -8,7 +8,7 @@ export default function CatalogProductCard({ product, href }: { product: Catalog
 
   return (
     <article className="flex min-w-0 flex-col gap-[15px]">
-      <Link href={href} tabIndex={-1} aria-hidden="true" className="relative block aspect-square w-full overflow-clip rounded-[20px] bg-white">
+      <Link href={href} tabIndex={-1} aria-hidden="true" className="relative block aspect-square w-full overflow-clip rounded-[20px] bg-[#F6F5F8]">
         {/* Whatever the photo's shape, it is shown whole, centred, with a margin around it (fit, not cropped). */}
         <Image
           src={image}
