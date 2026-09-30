@@ -1,7 +1,5 @@
-// The data model of the CMS: what the admin edits and what the shop writes (orders, customers).
-// Every interface here is a table/document the backend will need; field names and types are the contract.
-// Dates are ISO 8601 strings, money is a plain number in USD (two decimals), ids are strings except products
-// (their numeric id already exists in the shop).
+// The data model of the CMS, as the API sends it (camelCase JSON). Ids are integers, dates are ISO 8601 strings in UTC and
+// money is a plain number in USD. Totals, stock and statistics are always computed by the server.
 
 import type { ChosenOption } from "../cart";
 import type { Category } from "../../data/catalog";
@@ -12,14 +10,18 @@ export type { ChosenOption } from "../cart";
 export type CustomerStatus = "active" | "blocked";
 
 export interface Customer {
-  id: string;
+  id: number;
   name: string;
-  /** Unique (compared lowercase): checkout uses it to find the customer of an order. */
+  /** Unique (compared lowercase). */
   email: string;
   status: CustomerStatus;
   /** Internal note, only visible in the CMS. */
   notes: string;
   createdAt: string;
+  ordersCount: number;
+  /** Money from the orders that count as revenue. */
+  totalSpent: number;
+  lastOrderAt: string | null;
 }
 
 /** paid -> shipped -> delivered is the normal way; cancelled and refunded give the stock back and stop counting as revenue. */
@@ -48,14 +50,16 @@ export interface ShippingAddress {
 }
 
 export interface Order {
-  id: string;
+  id: number;
   /** What people read and search: "NB-1042". */
   number: string;
-  customerId: string;
+  /** null when the customer was deleted: the order stays. */
+  customerId: number | null;
   /** Snapshots, so the order still reads well if the customer is edited or deleted. */
   customerName: string;
   customerEmail: string;
   lines: OrderLine[];
+  units: number;
   subtotal: number;
   taxRate: number;
   tax: number;
@@ -70,27 +74,14 @@ export interface Order {
 
 /** A CMS user. Any admin can create or remove others; there are no roles yet. */
 export interface AdminUser {
-  id: string;
+  id: number;
   name: string;
   /** Unique (compared lowercase). */
   email: string;
-  /** Never the password itself: the backend stores only a salted hash (bcrypt/argon2). */
-  passwordHash: string;
   createdAt: string;
-  /** Id of the admin who created this one, or null for the first admin. */
-  createdBy: string | null;
-}
-
-export interface AdminSession {
-  id: string;
-  email: string;
-  name: string;
-  signedInAt: string;
+  /** Id and name of the admin who created this one, or null for the first admin. */
+  createdBy: number | null;
+  createdByName: string | null;
 }
 
 export const ORDER_STATUSES: OrderStatus[] = ["paid", "shipped", "delivered", "cancelled", "refunded"];
-
-/** Statuses that bring money in. */
-export const REVENUE_STATUSES: OrderStatus[] = ["paid", "shipped", "delivered"];
-
-export const isRevenue = (order: Order) => REVENUE_STATUSES.includes(order.status);

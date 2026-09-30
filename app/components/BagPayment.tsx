@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
-import type { CartItem } from "../lib/cart";
+import { errorMessage, useSession } from "../lib/api";
+import type { Cart } from "../lib/cart";
 import { isExpiryValid } from "../lib/cms/card";
-import { findCustomerByEmail, useCustomers } from "../lib/cms/customers";
 import { placeOrder } from "../lib/cms/orders";
 import { showToast } from "../lib/toast";
 
@@ -28,11 +28,12 @@ function formatExpiry(value: string) {
 
 /**
  * Payment details: contact and card fields, the totals and the pay button. Paying is a mock: the button only works once
- * every field is complete and valid (email, 16-digit card, a valid unexpired MM/YY, 3-digit code, holder); then it records
- * the order in the CMS store (../lib/cms/orders) and empties the bag. No card data is kept but the last 4 digits.
+ * every field is complete and valid (16-digit card, a valid unexpired MM/YY, 3-digit code, holder, shipping address); then
+ * it sends the order to the API (../lib/cms/orders), which empties the bag. Only the shipping address and the last 4 digits
+ * of the card leave the browser: the email is the account's, and the totals are the server's.
  */
-export default function BagPayment({ items, subtotal, taxRate }: { items: CartItem[]; subtotal: number; taxRate: number }) {
-  const [email, setEmail] = useState("");
+export default function BagPayment({ cart }: { cart: Cart }) {
+  const email = useSession("customer")?.user.email ?? "";
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -43,18 +44,19 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
   const [cvc, setCvc] = useState("");
   // Until the shopper types something the hint is generic; after that it names the next thing that is missing.
   const [touched, setTouched] = useState(false);
-  const customers = useCustomers();
+  // What the server refused (blocked account, no stock...), until the shopper changes something.
+  const [refused, setRefused] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
   const edit = (setter: (value: string) => void, value: string) => {
     setTouched(true);
+    setRefused(null);
     setter(value);
   };
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
-  const empty = subtotal === 0;
+  const { subtotal, taxRate, tax, total } = cart;
+  const empty = cart.items.length === 0;
 
   /** What is still wrong with the form, or null when it is complete. */
   const missing = (() => {
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Enter a valid email address.";
     if (!address.trim()) return "Enter your shipping address.";
     if (!city.trim()) return "Enter your city.";
     if (!postalCode.trim()) return "Enter your postal code.";
@@ -66,17 +68,25 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
     if (!holder.trim()) return "Enter the name on the card.";
     return null;
   })();
-  const blocked = missing === null && findCustomerByEmail(customers, email)?.status === "blocked";
-  const ready = !empty && missing === null && !blocked;
+  const ready = !empty && missing === null && !paying;
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!ready) return;
-    const shipping = { address: address.trim(), city: city.trim(), postalCode: postalCode.trim(), country: country.trim() };
-    const order = placeOrder({ name: holder.trim(), email, shipping, cardLast4: cardNumber.slice(-4), items });
+    const shippingAddress = { address: address.trim(), city: city.trim(), postalCode: postalCode.trim(), country: country.trim() };
+    setPaying(true);
+    setRefused(null);
+    let order;
+    try {
+      order = await placeOrder({ shippingAddress, cardLast4: cardNumber.slice(-4) });
+    } catch (error) {
+      setRefused(errorMessage(error));
+      return;
+    } finally {
+      setPaying(false);
+    }
     showToast(`Order ${order.number} placed`);
     setTouched(false);
-    setEmail("");
     setAddress("");
     setCity("");
     setPostalCode("");
@@ -102,10 +112,8 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
             <label htmlFor="bag-email" className={label}>
               Email Address
             </label>
-            <input id="bag-email" type="email" autoComplete="email" placeholder="your@email.com" value={email} onChange={(e) => {
-              setTouched(true);
-              setEmail(e.target.value);
-            }} className={`${frame} ${field} w-full py-[20px]`} />
+            {/* The order goes to the account's email: it cannot be changed here. */}
+            <input id="bag-email" type="email" autoComplete="email" placeholder="your@email.com" value={email} readOnly title="Your order is sent to the email of your account" className={`${frame} ${field} w-full py-[20px]`} />
           </div>
 
           <div className="flex flex-col gap-[15px]">
@@ -135,10 +143,7 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
                   placeholder="XXXX XXXX XXXX XXXX"
                   maxLength={19}
                   value={cardNumber}
-                  onChange={(e) => {
-                    setTouched(true);
-                    setCardNumber(formatCardNumber(e.target.value));
-                  }}
+                  onChange={(e) => edit(setCardNumber, formatCardNumber(e.target.value))}
                   className={`${field} w-full max-[460px]:text-[14px]`}
                 />
               </div>
@@ -150,10 +155,7 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
                   placeholder="MM/YY"
                   maxLength={5}
                   value={expiry}
-                  onChange={(e) => {
-                    setTouched(true);
-                    setExpiry(formatExpiry(e.target.value));
-                  }}
+                  onChange={(e) => edit(setExpiry, formatExpiry(e.target.value))}
                   className={`${field} w-[64px] max-[460px]:w-[48px] max-[460px]:text-[14px]`}
                 />
                 <div aria-hidden="true" className="flex h-[29px] w-0 shrink-0 items-center justify-center">
@@ -166,10 +168,7 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
                   placeholder="CVC"
                   maxLength={3}
                   value={cvc}
-                  onChange={(e) => {
-                    setTouched(true);
-                    setCvc(digitsOnly(e.target.value, 3));
-                  }}
+                  onChange={(e) => edit(setCvc, digitsOnly(e.target.value, 3))}
                   className={`${field} w-[40px] max-[460px]:w-[30px] max-[460px]:text-[14px]`}
                 />
               </div>
@@ -180,10 +179,7 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
             <label htmlFor="bag-holder" className={label}>
               Card Holder
             </label>
-            <input id="bag-holder" autoComplete="cc-name" placeholder="Name" value={holder} onChange={(e) => {
-              setTouched(true);
-              setHolder(e.target.value);
-            }} className={`${frame} ${field} w-full py-[20px]`} />
+            <input id="bag-holder" autoComplete="cc-name" placeholder="Name" value={holder} onChange={(e) => edit(setHolder, e.target.value)} className={`${frame} ${field} w-full py-[20px]`} />
           </div>
         </div>
 
@@ -203,9 +199,9 @@ export default function BagPayment({ items, subtotal, taxRate }: { items: CartIt
             </div>
           </dl>
 
-          {blocked && (
+          {refused && (
             <p role="alert" className="m-0 font-sans text-[16px] leading-normal text-[#c62828]">
-              This account can&apos;t place orders. Contact support.
+              {refused}
             </p>
           )}
           {!empty && missing && (

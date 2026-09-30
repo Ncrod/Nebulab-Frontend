@@ -1,10 +1,27 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
+import { errorMessage } from "../lib/api";
 import { changeQuantity, type CartItem } from "../lib/cart";
+import { showToast } from "../lib/toast";
 
 /** One line of the order: photo, name, unit price, chosen options and the quantity pill. */
 export default function BagItem({ item }: { item: CartItem }) {
+  const [busy, setBusy] = useState(false);
+
+  /** The server takes the final quantity (0 removes the line) and answers with the whole cart. */
+  async function setQuantity(quantity: number) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await changeQuantity(item.id, quantity);
+    } catch (error) {
+      showToast(errorMessage(error)); // "Only 3 left in stock."
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <li className="flex items-center gap-[34px] overflow-clip border-b border-black/[0.26] px-[42px] py-[26px] first:border-t max-notebook:px-[8px] max-tablet:gap-[16px] max-tablet:py-[18px]">
@@ -33,7 +50,7 @@ export default function BagItem({ item }: { item: CartItem }) {
           <div className="ml-auto flex w-[156px] shrink-0 items-center justify-between rounded-full border-[1.224px] border-black/[0.21] bg-white px-[20px] py-[16px] shadow-[0_4.897px_4.897px_0_rgba(0,0,0,0.16)] max-desktop:w-[120px] max-desktop:px-[14px] max-desktop:py-[10px] max-tablet:ml-0">
             <button
               type="button"
-              onClick={() => changeQuantity(item.id, -1)}
+              onClick={() => setQuantity(item.quantity - 1)}
               aria-label={item.quantity > 1 ? `One less ${item.name}` : `Remove ${item.name}`}
               className="flex size-[29.032px] shrink-0 cursor-pointer items-center justify-center max-desktop:size-[22px]"
             >
@@ -44,7 +61,7 @@ export default function BagItem({ item }: { item: CartItem }) {
             </span>
             <button
               type="button"
-              onClick={() => changeQuantity(item.id, 1)}
+              onClick={() => setQuantity(item.quantity + 1)}
               aria-label={`One more ${item.name}`}
               className="flex size-[29.032px] shrink-0 cursor-pointer items-center justify-center max-desktop:size-[22px]"
             >

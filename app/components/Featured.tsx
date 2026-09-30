@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useLiveProducts } from "../lib/cms/products";
+import { useRecommendedProducts } from "../lib/cms/products";
 import ProductCarousel from "./ProductCarousel";
 import type { Product } from "./ProductCard";
 
 const cardImage = "absolute inset-0 size-full object-cover";
 
-// The home carousel shows the products marked "Recommended" in the CMS. These five have their own cut-out art, cropped
+// The home carousel shows the products marked "Recommended" in the CMS (the API's `recommended=true` list). These five have their own cut-out art, cropped
 // by hand; any other product uses its catalog photo (a wide render) with the same crop as the catalog cards.
 const ART: Record<string, Pick<Product, "image" | "frameClassName" | "imageClassName">> = {
   "ipad-pro-13": { image: "/images/products/ipad-pro.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
@@ -32,14 +32,12 @@ const WIDE_RENDER = {
 
 export default function Featured({ loggedIn = false }: { loggedIn?: boolean }) {
   const productsBase = loggedIn ? "/home/products" : "/products";
-  const products: Product[] = useLiveProducts()
-    .filter((product) => product.recommended)
-    .map((product) => ({
-      name: product.name,
-      price: product.price,
-      href: `${productsBase}/${product.slug}`,
-      ...(ART[product.slug] ?? { image: product.image, ...WIDE_RENDER }),
-    }));
+  const products: Product[] = useRecommendedProducts().data.map((product) => ({
+    name: product.name,
+    price: product.price,
+    href: `${productsBase}/${product.slug}`,
+    ...(ART[product.slug] ?? { image: product.image, ...WIDE_RENDER }),
+  }));
 
   return (
     <section className="relative flex flex-col items-center overflow-x-clip pb-[134px] pt-[93px]">

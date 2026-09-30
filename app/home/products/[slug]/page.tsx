@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import ProductDetailLoader from "../../../components/ProductDetailLoader";
-import { getSeedProductBySlug } from "../../../data/catalog";
+import { getProductBySlug } from "../../../lib/server-api";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = getSeedProductBySlug((await params).slug);
+  const product = await getProductBySlug((await params).slug);
   return { title: product ? `${product.name} | Nebulab` : "Product | Nebulab" };
 }
 
-// Signed-in product page. Temporary preview route: once auth exists, "/products/<slug>" will render this variant by session.
+// Signed-in product page. components/SessionGate sends a signed-out visit to /login, and a signed-in one on "/products/<slug>" here.
 export default async function SignedInProductPage({ params }: Props) {
   return <ProductDetailLoader loggedIn slug={(await params).slug} />;
 }

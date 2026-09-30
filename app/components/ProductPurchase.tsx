@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { errorMessage } from "../lib/api";
 import { addToCart } from "../lib/cart";
 import { showToast } from "../lib/toast";
 import type { CatalogProduct } from "../data/catalog";
@@ -39,6 +40,7 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
   // The chosen button of each attribute, by position (a value can repeat: the design shows "Citrus" twice).
   const [chosen, setChosen] = useState<Record<string, number>>({});
   const [added, setAdded] = useState(false);
+  const [busy, setBusy] = useState(false);
   const addedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => () => clearTimeout(addedTimer.current), []);
@@ -47,27 +49,34 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
   const soldOut = product.stock <= 0;
   const complete = missing.length === 0 && !soldOut;
 
-  function addCurrent() {
-    if (!complete) return; // the buttons are disabled too; this keeps the rule even if one is triggered another way
-    addToCart(
-      { slug: product.slug, name: product.name, price: product.price, image: product.image },
-      product.options.map((option) => ({ name: option.name, value: option.values[chosen[option.name]] })),
-    );
+  /** Sends the product and its chosen options to the bag (the server sets name, price and photo). False when it was refused. */
+  async function addCurrent(): Promise<boolean> {
+    if (!complete || busy) return false; // the buttons are disabled too; this keeps the rule even if one is triggered another way
+    setBusy(true);
+    try {
+      await addToCart(
+        product.slug,
+        product.options.map((option) => ({ name: option.name, value: option.values[chosen[option.name]] })),
+      );
+      return true;
+    } catch (error) {
+      showToast(errorMessage(error)); // "Only 3 left in stock."
+      return false;
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function handleAdd() {
-    if (!complete) return;
-    addCurrent();
+  async function handleAdd() {
+    if (!(await addCurrent())) return;
     showToast("Product added to your bag");
     setAdded(true);
     clearTimeout(addedTimer.current);
     addedTimer.current = setTimeout(() => setAdded(false), 1800);
   }
 
-  function handleBuy() {
-    if (!complete) return;
-    addCurrent();
-    router.push("/bag");
+  async function handleBuy() {
+    if (await addCurrent()) router.push("/bag");
   }
 
   return (

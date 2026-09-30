@@ -413,6 +413,8 @@ export function DataTable<T>({
   resetKey,
   emptyTitle,
   emptyText,
+  loading = false,
+  error = null,
   caption,
 }: {
   rows: T[];
@@ -427,6 +429,10 @@ export function DataTable<T>({
   resetKey?: string;
   emptyTitle: string;
   emptyText: string;
+  /** Still waiting for the server (the first answer can take a while): the empty state says so instead of "no results". */
+  loading?: boolean;
+  /** Why the data could not be loaded, if it could not. */
+  error?: string | null;
   caption: string;
 }) {
   const [sort, setSort] = useState<{ id: string; dir: "asc" | "desc" } | null>(defaultSort ?? null);
@@ -531,8 +537,8 @@ export function DataTable<T>({
 
       {rows.length === 0 ? (
         <div role="status" className="flex flex-col items-center gap-[6px] px-[20px] py-[64px] text-center">
-          <p className="m-0 font-display text-[20px] font-medium text-white">{emptyTitle}</p>
-          <p className="m-0 font-sans text-[15px] text-[#98a2b3]">{emptyText}</p>
+          <p className="m-0 font-display text-[20px] font-medium text-white">{loading ? "Loading…" : error ? "We could not load this" : emptyTitle}</p>
+          <p className="m-0 font-sans text-[15px] text-[#98a2b3]">{loading ? "The server can take a few seconds to wake up." : (error ?? emptyText)}</p>
         </div>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-[12px] border-t border-white/[0.06] px-[16px] py-[12px] font-sans text-[14px] text-[#98a2b3]">

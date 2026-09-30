@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import ProductDetailLoader from "../../components/ProductDetailLoader";
-import { getSeedProductBySlug } from "../../data/catalog";
+import { getProductBySlug } from "../../lib/server-api";
 
 type Props = { params: Promise<{ slug: string }> };
 
-// The title uses the seed catalog (the only one the server knows); the page itself reads the CMS store in the browser.
+// The title comes from the API when it answers in time; the page itself loads the product in the browser.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = getSeedProductBySlug((await params).slug);
+  const product = await getProductBySlug((await params).slug);
   return { title: product ? `${product.name} | Nebulab` : "Product | Nebulab" };
 }
 

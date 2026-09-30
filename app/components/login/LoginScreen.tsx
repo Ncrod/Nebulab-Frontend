@@ -5,37 +5,67 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { errorMessage, useSession } from "../../lib/api";
+import { requestPasswordReset, signInCustomer, signUpCustomer } from "../../lib/auth";
 import { signInAdmin, useAdminSession } from "../../lib/cms/admin-auth";
+import { showToast } from "../../lib/toast";
 import styles from "../../login/login.module.css";
 
 const MoltenPanes = dynamic(() => import("./molten-panes"), { ssr: false });
 
 type Mode = "login" | "signup" | "forgot";
 
-// The shop's forms are design only (not wired to any backend). The "admin" variant is the CMS login (/login-admin):
-// sign in only, checked against the mock credentials of ../../lib/cms/admin-auth.
+// The shop's forms (sign in, sign up, reset password) talk to the API through ../../lib/auth. The "admin" variant is the
+// CMS login (/login-admin): sign in only, and only accounts with the admin role get in (../../lib/cms/admin-auth).
 export function LoginScreen({ initialMode = "login", variant = "shop" }: { initialMode?: Mode; variant?: "shop" | "admin" }) {
   const isAdmin = variant === "admin";
   const router = useRouter();
   const adminSession = useAdminSession();
+  const customerSession = useSession("customer");
   const [mode, setMode] = useState<Mode>(isAdmin ? "login" : initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  // Already signed in: straight to the CMS.
+  // Already signed in: straight to the CMS, or to the signed-in store.
   useEffect(() => {
     if (isAdmin && adminSession) router.replace("/admin");
-  }, [isAdmin, adminSession, router]);
+    if (!isAdmin && customerSession) router.replace("/home");
+  }, [isAdmin, adminSession, customerSession, router]);
 
-  async function handleAdminSubmit(event: FormEvent<HTMLFormElement>) {
+  function switchMode(next: Mode) {
+    setError(null);
+    setMode(next);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     const data = new FormData(event.currentTarget);
-    const session = await signInAdmin(String(data.get("email") ?? ""), String(data.get("password") ?? ""));
-    if (!session) {
-      setError("Wrong email or password.");
-      return;
+    const email = String(data.get("email") ?? "");
+    const password = String(data.get("password") ?? "");
+    setBusy(true);
+    setError(null);
+    try {
+      if (isAdmin) {
+        if (!(await signInAdmin(email, password))) return setError("Wrong email or password.");
+        router.replace("/admin");
+      } else if (mode === "signup") {
+        await signUpCustomer(String(data.get("name") ?? ""), email, password);
+        router.replace("/home");
+      } else if (mode === "forgot") {
+        await requestPasswordReset(email);
+        showToast("If that email has an account, we sent you a link to reset your password.");
+        switchMode("login");
+      } else {
+        await signInCustomer(email, password);
+        router.replace("/home");
+      }
+    } catch (failure) {
+      setError(errorMessage(failure));
+    } finally {
+      setBusy(false);
     }
-    router.replace("/admin");
   }
 
   // Mode switches fade/rise the form and tween the block height so the logos glide.
@@ -90,18 +120,18 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
               <div ref={pageRef} className="t-page">
                 {isForgot && <p className={styles.subtitle}>Reset your password</p>}
                 {isAdmin && <p className={styles.subtitle}>Admin access</p>}
-                <form className={styles.form} onSubmit={isAdmin ? handleAdminSubmit : (e) => e.preventDefault()}>
+                <form className={styles.form} onSubmit={handleSubmit}>
                   <div className={styles.fields}>
                     {isSignup && (
                       <div className={styles.field}>
                         <label htmlFor="name" className={styles.label}>Name</label>
-                        <input id="name" type="text" autoComplete="name" placeholder="Your name" className={styles.input} />
+                        <input id="name" name="name" type="text" autoComplete="name" placeholder="Your name" required onChange={() => setError(null)} className={styles.input} />
                       </div>
                     )}
 
                     <div className={styles.field}>
                       <label htmlFor="email" className={styles.label}>Email</label>
-                      <input id="email" name="email" type="email" autoComplete="email" placeholder="your@email.com" required={isAdmin} onChange={() => setError(null)} className={styles.input} />
+                      <input id="email" name="email" type="email" autoComplete="email" placeholder="your@email.com" required onChange={() => setError(null)} className={styles.input} />
                     </div>
 
                     {!isForgot && (
@@ -111,7 +141,7 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                           <input
                             id="password"
                             name="password"
-                            required={isAdmin}
+                            required
                             onChange={() => setError(null)}
                             type={showPassword ? "text" : "password"}
                             autoComplete={isSignup ? "new-password" : "current-password"}
@@ -132,16 +162,16 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                     )}
                   </div>
 
-                  {isAdmin && error && (
+                  {error && (
                     <p role="alert" className={styles.error}>
                       {error}
                     </p>
                   )}
 
                   <div className={styles.actions}>
-                    <button type="submit" className={styles.primary}>{submitLabel}</button>
+                    <button type="submit" disabled={busy} className={styles.primary}>{submitLabel}</button>
                     {isLogin && !isAdmin && (
-                      <button type="button" onClick={() => setMode("signup")} className={styles.secondary}>
+                      <button type="button" onClick={() => switchMode("signup")} className={styles.secondary}>
                         Create account
                       </button>
                     )}
@@ -153,11 +183,11 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                         Back to the store
                       </Link>
                     ) : isLogin ? (
-                      <button type="button" onClick={() => setMode("forgot")} className={styles.link}>
+                      <button type="button" onClick={() => switchMode("forgot")} className={styles.link}>
                         ¿Forgot your password?
                       </button>
                     ) : (
-                      <button type="button" onClick={() => setMode("login")} className={styles.link}>
+                      <button type="button" onClick={() => switchMode("login")} className={styles.link}>
                         {isSignup ? "Already have an account? Sign in" : "Back to sign in"}
                       </button>
                     )}

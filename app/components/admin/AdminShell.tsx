@@ -5,12 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { signOutAdmin, useAdminSession } from "../../lib/cms/admin-auth";
-import { resetCustomers } from "../../lib/cms/customers";
-import { resetOrders } from "../../lib/cms/orders";
-import { resetProducts } from "../../lib/cms/products";
-import { showToast } from "../../lib/toast";
-import { BoxIcon, ChevronDownIcon, DashboardIcon, LogOutIcon, MenuIcon, ReceiptIcon, RefreshIcon, ShieldIcon, StoreIcon, UsersIcon } from "./AdminIcons";
-import { ConfirmDialog, Dropdown, iconBtn } from "./ui";
+import { BoxIcon, ChevronDownIcon, DashboardIcon, LogOutIcon, MenuIcon, ReceiptIcon, ShieldIcon, StoreIcon, UsersIcon } from "./AdminIcons";
+import { Dropdown, iconBtn } from "./ui";
 import { initials } from "./format";
 
 const NAV = [
@@ -32,7 +28,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     if (session === null) router.replace("/login-admin");
@@ -44,16 +39,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const current = NAV.find((item) => isActive(pathname, item.href));
 
   function signOut() {
-    signOutAdmin();
+    void signOutAdmin();
     router.replace("/login-admin");
-  }
-
-  function resetData() {
-    resetProducts();
-    resetCustomers();
-    resetOrders();
-    setConfirmReset(false);
-    showToast("Demo data restored");
   }
 
   const sidebar = (
@@ -64,7 +51,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           className="flex h-[38px] items-center gap-[8px] rounded-[10px] bg-white/[0.06] px-[10px] font-display text-[16px] font-medium text-white transition-colors hover:bg-white/[0.1]"
           items={[
             { label: "View store", icon: <StoreIcon width={16} height={16} />, onSelect: () => window.open("/", "_blank") },
-            { label: "Restore demo data", icon: <RefreshIcon width={16} height={16} />, onSelect: () => setConfirmReset(true) },
             { label: "Sign out", icon: <LogOutIcon width={16} height={16} />, onSelect: signOut, danger: true },
           ]}
         >
@@ -137,16 +123,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-[24px] p-[24px] max-tablet:p-[16px]">{children}</div>
         </main>
       </div>
-
-      <ConfirmDialog
-        open={confirmReset}
-        title="Restore demo data?"
-        message="Products, customers and sales go back to the demo data. Everything you changed or created in the CMS is lost."
-        confirmLabel="Restore"
-        danger
-        onConfirm={resetData}
-        onCancel={() => setConfirmReset(false)}
-      />
     </div>
   );
 }

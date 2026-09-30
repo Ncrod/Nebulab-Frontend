@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { customerStats, deleteCustomers, emptyCustomer, findCustomerByEmail, saveCustomer, setCustomerStatus, useCustomers, type CustomerInput } from "../../lib/cms/customers";
-import { useOrders } from "../../lib/cms/orders";
-import { isRevenue, type Customer, type CustomerStatus } from "../../lib/cms/types";
+import { ApiError, errorMessage } from "../../lib/api";
+import { deleteCustomers, emptyCustomer, findCustomerByEmail, saveCustomer, setCustomerStatus, useCustomers, type CustomerInput } from "../../lib/cms/customers";
+import { useAdminOrders } from "../../lib/cms/orders";
+import type { Customer, CustomerStatus } from "../../lib/cms/types";
 import { showToast } from "../../lib/toast";
 import { EditIcon, TrashIcon } from "./AdminIcons";
 import { CUSTOMER_STATUS, ORDER_STATUS } from "./statuses";
@@ -22,15 +23,12 @@ const Avatar = ({ name, size = 36 }: { name: string; size?: number }) => (
 
 /** Customers section: everyone who signed up or bought, their spending, and the tools to block or edit them. */
 export default function CustomersAdmin() {
-  const customers = useCustomers();
-  const orders = useOrders();
+  const { data: customers, loading, error } = useCustomers();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<(string | number)[]>([]);
   const [editing, setEditing] = useState<Customer | "new" | null>(null);
   const [toDelete, setToDelete] = useState<Customer[] | null>(null);
-
-  const stats = useMemo(() => customerStats(orders), [orders]);
 
   const rows = useMemo(() => {
     const words = normalize(query).split(/\s+/).filter(Boolean);
@@ -41,7 +39,7 @@ export default function CustomersAdmin() {
     });
   }, [customers, query, status]);
 
-  const selectedIds = selected.filter((id) => customers.some((c) => c.id === id)) as string[];
+  const selectedIds = selected.filter((id) => customers.some((c) => c.id === id)) as number[];
   const count = (s: CustomerStatus) => customers.filter((c) => c.status === s).length;
 
   const columns: Column<Customer>[] = [
@@ -73,8 +71,10 @@ export default function CustomersAdmin() {
               label: CUSTOMER_STATUS[s].label,
               selected: c.status === s,
               onSelect: () => {
-                setCustomerStatus(c.id, s);
-                showToast(`${c.name} is now ${CUSTOMER_STATUS[s].label.toLowerCase()}`);
+                setCustomerStatus([c.id], s).then(
+                  () => showToast(`${c.name} is now ${CUSTOMER_STATUS[s].label.toLowerCase()}`),
+                  (failure) => showToast(errorMessage(failure)),
+                );
               },
             }))}
           >
@@ -85,18 +85,15 @@ export default function CustomersAdmin() {
         </span>
       ),
     },
-    { id: "orders", header: "Orders", minWidth: 100, align: "right", sort: (c) => stats.get(c.id)?.orders ?? 0, cell: (c) => stats.get(c.id)?.orders ?? 0 },
-    { id: "spent", header: "Total spent", minWidth: 130, align: "right", sort: (c) => stats.get(c.id)?.spent ?? 0, cell: (c) => formatMoney(stats.get(c.id)?.spent ?? 0) },
+    { id: "orders", header: "Orders", minWidth: 100, align: "right", sort: (c) => c.ordersCount, cell: (c) => c.ordersCount },
+    { id: "spent", header: "Total spent", minWidth: 130, align: "right", sort: (c) => c.totalSpent, cell: (c) => formatMoney(c.totalSpent) },
     {
       id: "last",
       header: "Last order",
       minWidth: 120,
-      sort: (c) => stats.get(c.id)?.lastOrderAt ?? "",
+      sort: (c) => c.lastOrderAt ?? "",
       className: "whitespace-nowrap text-[#98a2b3]",
-      cell: (c) => {
-        const last = stats.get(c.id)?.lastOrderAt;
-        return last ? formatDate(last) : "—";
-      },
+      cell: (c) => (c.lastOrderAt ? formatDate(c.lastOrderAt) : "—"),
     },
     { id: "joined", header: "Joined", minWidth: 120, sort: (c) => c.createdAt, className: "whitespace-nowrap text-[#98a2b3]", cell: (c) => formatDate(c.createdAt) },
     {
@@ -116,22 +113,30 @@ export default function CustomersAdmin() {
     },
   ];
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!toDelete) return;
-    deleteCustomers(toDelete.map((c) => c.id));
-    showToast(toDelete.length === 1 ? `${toDelete[0].name} deleted` : `${toDelete.length} customers deleted`);
+    try {
+      await deleteCustomers(toDelete.map((c) => c.id));
+      showToast(toDelete.length === 1 ? `${toDelete[0].name} deleted` : `${toDelete.length} customers deleted`);
+    } catch (failure) {
+      showToast(errorMessage(failure));
+    }
     setSelected([]);
     setToDelete(null);
     setEditing(null);
   }
 
-  function bulkStatus(next: CustomerStatus) {
-    selectedIds.forEach((id) => setCustomerStatus(id, next));
-    showToast(`${selectedIds.length} customer${selectedIds.length === 1 ? "" : "s"} ${next === "blocked" ? "blocked" : "activated"}`);
+  async function bulkStatus(next: CustomerStatus) {
+    try {
+      await setCustomerStatus(selectedIds, next);
+      showToast(`${selectedIds.length} customer${selectedIds.length === 1 ? "" : "s"} ${next === "blocked" ? "blocked" : "activated"}`);
+    } catch (failure) {
+      showToast(errorMessage(failure));
+    }
     setSelected([]);
   }
 
-  const withOrders = toDelete?.reduce((sum, c) => sum + (stats.get(c.id)?.orders ?? 0), 0) ?? 0;
+  const withOrders = toDelete?.reduce((sum, c) => sum + c.ordersCount, 0) ?? 0;
 
   return (
     <>
@@ -173,6 +178,8 @@ export default function CustomersAdmin() {
         onRowClick={setEditing}
         defaultSort={{ id: "joined", dir: "desc" }}
         resetKey={`${query}|${status}`}
+        loading={loading}
+        error={error}
         caption="Customers"
         emptyTitle="No customers found"
         emptyText={customers.length === 0 ? "Customers appear here when they buy, or when you add them." : "Try another word or clear the filter."}
@@ -195,19 +202,18 @@ export default function CustomersAdmin() {
 
 /** Profile form of a customer (or the form of a new one), their numbers and their order history. */
 function CustomerDrawer({ customer, onClose, onDelete }: { customer: Customer | null; onClose: () => void; onDelete: (customer: Customer) => void }) {
-  const customers = useCustomers();
-  const orders = useOrders();
+  const { data: customers } = useCustomers();
   const [form, setForm] = useState<CustomerInput>(() => (customer ? { name: customer.name, email: customer.email, notes: customer.notes } : emptyCustomer()));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const set = <K extends keyof CustomerInput>(key: K, value: CustomerInput[K]) => setForm((f) => ({ ...f, [key]: value }));
 
   // The live version of the customer (its status can change from the list while the drawer is open).
   const live = customer ? (customers.find((c) => c.id === customer.id) ?? customer) : null;
-  const history = customer ? orders.filter((o) => o.customerId === customer.id) : [];
-  const spent = history.filter(isRevenue).reduce((sum, o) => sum + o.total, 0);
-  const paid = history.filter(isRevenue).length;
+  const { orders: history, summary } = useAdminOrders({ days: "all", status: "all", search: "", customer: customer?.id, enabled: customer !== null });
+  const [saving, setSaving] = useState(false);
 
-  function submit() {
+  async function submit() {
+    if (saving) return;
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = "The customer needs a name.";
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = "Enter a valid email address.";
@@ -217,9 +223,18 @@ function CustomerDrawer({ customer, onClose, onDelete }: { customer: Customer | 
     }
     setErrors(next);
     if (Object.keys(next).length > 0) return;
-    const saved = saveCustomer(form, customer?.id);
-    showToast(customer ? `${saved.name} updated` : `${saved.name} added`);
-    onClose();
+    setSaving(true);
+    try {
+      const saved = await saveCustomer(form, customer?.id);
+      showToast(customer ? `${saved.name} updated` : `${saved.name} added`);
+      onClose();
+    } catch (failure) {
+      // The server checks it again ("Another customer already uses this email."): its message goes under the field.
+      const fields = failure instanceof ApiError ? failure.fields : {};
+      setErrors(fields.name || fields.email ? fields : { name: errorMessage(failure) });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -239,7 +254,7 @@ function CustomerDrawer({ customer, onClose, onDelete }: { customer: Customer | 
           <button type="button" onClick={onClose} className={btnGhost}>
             Cancel
           </button>
-          <button type="button" onClick={submit} className={btnPrimary}>
+          <button type="button" onClick={submit} disabled={saving} className={btnPrimary}>
             {customer ? "Save changes" : "Add customer"}
           </button>
         </>
@@ -258,8 +273,8 @@ function CustomerDrawer({ customer, onClose, onDelete }: { customer: Customer | 
             <div className="grid grid-cols-3 gap-[10px]">
               {[
                 ["Orders", String(history.length)],
-                ["Total spent", formatMoney(spent)],
-                ["Avg. order", formatMoney(paid ? spent / paid : 0)],
+                ["Total spent", formatMoney(summary.revenue)],
+                ["Avg. order", formatMoney(summary.avgOrder)],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-[12px] border border-white/[0.08] p-[14px]">
                   <p className="m-0 font-sans text-[13px] text-[#98a2b3]">{label}</p>
@@ -276,7 +291,7 @@ function CustomerDrawer({ customer, onClose, onDelete }: { customer: Customer | 
               <Segmented<CustomerStatus>
                 ariaLabel="Account status"
                 value={live.status}
-                onChange={(s) => setCustomerStatus(live.id, s)}
+                onChange={(s) => setCustomerStatus([live.id], s).catch((failure) => showToast(errorMessage(failure)))}
                 options={[
                   { value: "active", label: "Active" },
                   { value: "blocked", label: "Blocked" },
@@ -308,7 +323,7 @@ function CustomerDrawer({ customer, onClose, onDelete }: { customer: Customer | 
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium text-white">{order.number}</span>
                       <span className="block truncate text-[13px] text-[#98a2b3]">
-                        {formatDateTime(order.createdAt)} · {order.lines.reduce((n, l) => n + l.quantity, 0)} item(s)
+                        {formatDateTime(order.createdAt)} · {order.units} item(s)
                       </span>
                     </span>
                     <Badge tone={ORDER_STATUS[order.status].tone}>{ORDER_STATUS[order.status].label}</Badge>

@@ -1,90 +1,95 @@
 "use client";
 
-import { clearCart, type CartItem } from "../cart";
-import { findOrCreateCustomer } from "./customers";
-import { TAX_RATE, getDemoData } from "./demo-data";
-import { adjustStock, readProducts } from "./products";
-import { createStore } from "./store";
-import type { Order, OrderLine, OrderStatus, ShippingAddress } from "./types";
+import { api, type Paginated } from "../api";
+import { refreshCart } from "../cart";
+import { useDebounced, useQuery } from "../resource";
+import { invalidateCustomers } from "./customers";
+import { invalidateProducts } from "./products";
+import type { Order, OrderStatus, ShippingAddress } from "./types";
 
-export { TAX_RATE };
-
-const store = createStore<Order[]>("nebulab-cms-orders-v2", () => getDemoData().orders, []);
-
-export const useOrders = store.use;
-export const readOrders = store.read;
-export const resetOrders = store.reset;
-
-const round2 = (n: number) => Math.round(n * 100) / 100;
+// Orders: the shop's checkout and the CMS "Sales" section, from the API. Totals, stock and the numbers of the cards and tabs
+// are computed by the server.
 
 export interface CheckoutInput {
-  name: string;
-  email: string;
-  shipping: ShippingAddress;
+  shippingAddress: ShippingAddress;
   cardLast4: string;
-  items: CartItem[];
 }
 
 /**
- * The shop's "Pay": creates the order (and the customer, if this email is new), takes the units out of the stock
- * and empties the bag. The backend will do all of this in one transaction.
+ * The shop's "Pay". The server takes the customer from the session and the lines from their cart, takes the units out of the
+ * stock and empties the cart. Throws ApiError (empty bag, no stock, blocked account, empty fields...).
  */
-export function placeOrder({ name, email, shipping, cardLast4, items }: CheckoutInput): Order {
-  const now = new Date().toISOString();
-  const products = readProducts();
-
-  const lines: OrderLine[] = items.map((item) => {
-    const product = products.find((p) => p.slug === item.slug);
-    return {
-      productId: product?.id ?? null,
-      slug: item.slug,
-      name: item.name,
-      category: product?.category ?? null,
-      image: item.image,
-      price: item.price,
-      quantity: item.quantity,
-      options: item.options,
-    };
-  });
-  const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
-  const tax = round2(subtotal * TAX_RATE);
-  const customer = findOrCreateCustomer(name, email);
-
-  const orders = store.read();
-  const nextNumber = orders.reduce((max, order) => Math.max(max, Number(order.number.replace("NB-", "")) || 1000), 1000) + 1;
-  const order: Order = {
-    id: `ord_${String(nextNumber - 1000).padStart(4, "0")}`,
-    number: `NB-${nextNumber}`,
-    customerId: customer.id,
-    customerName: customer.name,
-    customerEmail: customer.email,
-    lines,
-    subtotal,
-    taxRate: TAX_RATE,
-    tax,
-    total: round2(subtotal + tax),
-    status: "paid",
-    shippingAddress: shipping,
-    cardLast4,
-    createdAt: now,
-    updatedAt: now,
-  };
-  store.write([order, ...orders]);
-  adjustStock(lines.map((line) => ({ slug: line.slug, delta: -line.quantity })));
-  clearCart();
+export async function placeOrder(input: CheckoutInput): Promise<Order> {
+  const order = await api<Order>("/orders/", { method: "POST", session: "customer", body: input });
+  await refreshCart();
   return order;
 }
 
-const returnsStock = (status: OrderStatus) => status === "cancelled" || status === "refunded";
+export interface OrdersSummary {
+  revenue: number;
+  orders: number;
+  avgOrder: number;
+}
 
-/** Changes an order's status. Cancelling/refunding gives the units back to the stock; undoing that takes them again. */
-export function setOrderStatus(id: string, status: OrderStatus) {
-  const order = store.read().find((o) => o.id === id);
-  if (!order || order.status === status) return;
-  if (returnsStock(status) !== returnsStock(order.status)) {
-    const sign = returnsStock(status) ? 1 : -1;
-    adjustStock(order.lines.map((line) => ({ slug: line.slug, delta: sign * line.quantity })));
-  }
-  const now = new Date().toISOString();
-  store.update((orders) => orders.map((o) => (o.id === id ? { ...o, status, updatedAt: now } : o)));
+export type StatusCounts = Record<OrderStatus | "all", number>;
+
+interface OrdersPage extends Paginated<Order> {
+  summary: OrdersSummary;
+  statusCounts: StatusCounts;
+}
+
+const NO_SUMMARY: OrdersSummary = { revenue: 0, orders: 0, avgOrder: 0 };
+const NO_COUNTS: StatusCounts = { all: 0, paid: 0, shipped: 0, delivered: 0, cancelled: 0, refunded: 0 };
+
+export interface OrdersFilter {
+  /** Orders placed in the last N days; "all" for no limit. */
+  days: number | "all";
+  status: OrderStatus | "all";
+  search: string;
+  /** Only the orders of this customer. */
+  customer?: number;
+  /** false: nothing is requested (the caller has nothing to show yet). */
+  enabled?: boolean;
+}
+
+/** Every order that matches, with the `summary` of the cards and the `statusCounts` of the tabs (which ignore status and search). */
+export function useAdminOrders({ days, status, search, customer, enabled = true }: OrdersFilter) {
+  const text = useDebounced(search.trim(), 300);
+  const params = new URLSearchParams();
+  if (days !== "all") params.set("days", String(days));
+  if (status !== "all") params.set("status", status);
+  if (text) params.set("search", text);
+  if (customer !== undefined) params.set("customer", String(customer));
+  const key = `orders:${enabled}:${params}`;
+
+  const result = useQuery(key, async () => {
+    if (!enabled) return { orders: [] as Order[], summary: NO_SUMMARY, statusCounts: NO_COUNTS };
+    // The tables sort and page in the browser, so every page of the answer is loaded (100 at a time).
+    const first = await api<OrdersPage>(`/admin/orders/?${params}&page_size=100&page=1`, { session: "admin" });
+    const orders = [...first.results];
+    for (let page = 2, next = first.next; next; page++) {
+      const more = await api<Paginated<Order>>(`/admin/orders/?${params}&page_size=100&page=${page}`, { session: "admin" });
+      orders.push(...more.results);
+      next = more.next;
+    }
+    return { orders, summary: first.summary, statusCounts: first.statusCounts };
+  });
+
+  return {
+    orders: result.data?.orders ?? [],
+    summary: result.data?.summary ?? NO_SUMMARY,
+    statusCounts: result.data?.statusCounts ?? NO_COUNTS,
+    loading: result.loading || text !== search.trim(),
+    error: result.error,
+    reload: result.reload,
+  };
+}
+
+/** Changes an order's status. The server puts cancelled/refunded units back in the stock (and takes them again if that is undone). */
+export async function setOrderStatus(id: number, status: OrderStatus): Promise<Order> {
+  const order = await api<Order>(`/admin/orders/${id}/`, { method: "PATCH", session: "admin", body: { status } });
+  // Stock and customer numbers changed on the server: those lists load again the next time they are shown.
+  invalidateProducts();
+  invalidateCustomers();
+  return order;
 }

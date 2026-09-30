@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Account | Nebulab",
 };
 
-// Signed-in only. There is no auth yet, so for now anyone can open it; once there is, a signed-out visit will redirect to /login.
+// Signed-in only: components/SessionGate sends a signed-out visit to /login.
 export default function Account() {
   return <AccountPage />;
 }

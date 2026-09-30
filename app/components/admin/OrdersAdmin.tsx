@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { placedWithin } from "../../lib/cms/metrics";
-import { setOrderStatus, useOrders } from "../../lib/cms/orders";
-import { isRevenue, ORDER_STATUSES, type Order, type OrderStatus } from "../../lib/cms/types";
+import { useState } from "react";
+import { errorMessage } from "../../lib/api";
+import { setOrderStatus, useAdminOrders } from "../../lib/cms/orders";
+import { ORDER_STATUSES, type Order, type OrderStatus } from "../../lib/cms/types";
 import { showToast } from "../../lib/toast";
 import { ORDER_STATUS } from "./statuses";
 import { Badge, btnGhost, btnPrimary, cardCls, type Column, DataTable, Drawer, Dropdown, Field, PageHeader, SearchBox, Segmented, Select } from "./ui";
@@ -13,8 +13,7 @@ import { formatDateTime, formatMoney, formatOptions } from "./format";
 type StatusFilter = "all" | OrderStatus;
 type Range = "7" | "30" | "90" | "all";
 
-const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const units = (order: Order) => order.lines.reduce((n, line) => n + line.quantity, 0);
+const units = (order: Order) => order.units;
 
 /** The natural next step of an order, offered as the main button of its drawer. */
 const NEXT: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {
@@ -24,29 +23,26 @@ const NEXT: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>>
 
 /** Sales section: every order the store received, with its lines, totals and the tools to move it along or cancel it. */
 export default function OrdersAdmin() {
-  const orders = useOrders();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [range, setRange] = useState<Range>("30");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<number | null>(null);
 
-  // The range filter is applied first: the status tabs count what is left in it.
-  const inRange = useMemo(() => {
-    return range === "all" ? orders : placedWithin(orders, Number(range));
-  }, [orders, range]);
+  // The server filters by range, status and text. The cards (`summary`) count what the filters leave; the status tabs
+  // (`statusCounts`) count what the range leaves, whatever the status and text are.
+  const { orders: rows, summary, statusCounts, loading, error, reload } = useAdminOrders({ days: range === "all" ? "all" : Number(range), status, search: query });
+  const opened = rows.find((o) => o.id === openId) ?? null;
 
-  const rows = useMemo(() => {
-    const words = normalize(query).split(/\s+/).filter(Boolean);
-    return inRange.filter((o) => {
-      if (status !== "all" && o.status !== status) return false;
-      const haystack = normalize(`${o.number} ${o.customerName} ${o.customerEmail} ${o.lines.map((l) => l.name).join(" ")}`);
-      return words.every((word) => haystack.includes(word));
-    });
-  }, [inRange, query, status]);
-
-  const revenue = rows.filter(isRevenue).reduce((sum, o) => sum + o.total, 0);
-  const paid = rows.filter(isRevenue).length;
-  const opened = orders.find((o) => o.id === openId) ?? null;
+  /** Changes the status on the server, then loads the list again (the cards, the tabs and the stock changed with it). */
+  async function changeStatus(order: Order, next: OrderStatus) {
+    try {
+      await setOrderStatus(order.id, next);
+      showToast(`${order.number} is now ${ORDER_STATUS[next].label.toLowerCase()}`);
+      reload();
+    } catch (failure) {
+      showToast(errorMessage(failure));
+    }
+  }
 
   const columns: Column<Order>[] = [
     { id: "number", header: "Order", minWidth: 110, sort: (o) => Number(o.number.replace("NB-", "")), cell: (o) => <span className="font-medium text-white">{o.number}</span> },
@@ -70,7 +66,7 @@ export default function OrdersAdmin() {
       className: "text-[#98a2b3]",
       cell: (o) => (
         <span className="block truncate">
-          {o.lines[0].name}
+          {o.lines[0]?.name}
           {o.lines.length > 1 && ` +${o.lines.length - 1} more`}
         </span>
       ),
@@ -90,10 +86,7 @@ export default function OrdersAdmin() {
             items={ORDER_STATUSES.map((s) => ({
               label: ORDER_STATUS[s].label,
               selected: o.status === s,
-              onSelect: () => {
-                setOrderStatus(o.id, s);
-                showToast(`${o.number} is now ${ORDER_STATUS[s].label.toLowerCase()}`);
-              },
+              onSelect: () => changeStatus(o, s),
             }))}
           >
             <Badge tone={ORDER_STATUS[o.status].tone} chevron>
@@ -106,9 +99,9 @@ export default function OrdersAdmin() {
   ];
 
   const kpis = [
-    ["Revenue", formatMoney(revenue)],
-    ["Orders", String(rows.length)],
-    ["Avg. order", formatMoney(paid ? revenue / paid : 0)],
+    ["Revenue", formatMoney(summary.revenue)],
+    ["Orders", String(summary.orders)],
+    ["Avg. order", formatMoney(summary.avgOrder)],
   ];
 
   return (
@@ -144,7 +137,7 @@ export default function OrdersAdmin() {
         ariaLabel="Filter by status"
         value={status}
         onChange={setStatus}
-        options={[{ value: "all", label: "All", count: inRange.length }, ...ORDER_STATUSES.map((s) => ({ value: s, label: ORDER_STATUS[s].label, count: inRange.filter((o) => o.status === s).length }))]}
+        options={[{ value: "all", label: "All", count: statusCounts.all }, ...ORDER_STATUSES.map((s) => ({ value: s, label: ORDER_STATUS[s].label, count: statusCounts[s] }))]}
       />
 
       <DataTable
@@ -154,23 +147,20 @@ export default function OrdersAdmin() {
         onRowClick={(o) => setOpenId(o.id)}
         defaultSort={{ id: "date", dir: "desc" }}
         resetKey={`${query}|${status}|${range}`}
+        loading={loading}
+        error={error}
         caption="Orders"
         emptyTitle="No orders found"
-        emptyText={orders.length === 0 ? "Orders show up here when someone pays in the store." : "Try another word, status or date range."}
+        emptyText={statusCounts.all === 0 && !query ? "Orders show up here when someone pays in the store." : "Try another word, status or date range."}
       />
 
-      {opened && <OrderDrawer key={opened.id} order={opened} onClose={() => setOpenId(null)} />}
+      {opened && <OrderDrawer key={opened.id} order={opened} onClose={() => setOpenId(null)} onChange={(next) => changeStatus(opened, next)} />}
     </>
   );
 }
 
-function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) {
+function OrderDrawer({ order, onClose, onChange: change }: { order: Order; onClose: () => void; onChange: (status: OrderStatus) => void }) {
   const next = NEXT[order.status];
-
-  function change(status: OrderStatus) {
-    setOrderStatus(order.id, status);
-    showToast(`${order.number} is now ${ORDER_STATUS[status].label.toLowerCase()}`);
-  }
 
   const restocks = order.status === "cancelled" || order.status === "refunded";
 

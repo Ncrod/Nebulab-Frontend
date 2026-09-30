@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { sfProDisplay, neueMontreal } from "./fonts";
 import { Agentation } from "agentation";
+import SessionGate from "./components/SessionGate";
 import SideNav from "./components/SideNav";
 import SmoothScroll from "./components/SmoothScroll";
 import Toaster from "./components/Toaster";
@@ -23,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <SmoothScroll>
           <SideNav />
-          {children}
+          <SessionGate>{children}</SessionGate>
         </SmoothScroll>
         <Toaster />
         {process.env.NODE_ENV === "development" && (

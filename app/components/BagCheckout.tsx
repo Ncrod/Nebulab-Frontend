@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "../lib/cart";
-import { TAX_RATE } from "../lib/cms/orders";
 import BagItem from "./BagItem";
 import BagPayment from "./BagPayment";
 
@@ -13,8 +12,8 @@ import BagPayment from "./BagPayment";
  * the links here are the signed-in ones.
  */
 export default function BagCheckout() {
-  const items = useCart();
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const { data: cart, loading, error } = useCart();
+  const items = cart.items;
 
   return (
     <section className="relative pb-[151px] max-notebook:pb-[100px] max-tablet:pb-[80px]">
@@ -59,21 +58,27 @@ export default function BagCheckout() {
               </ul>
             ) : (
               <div role="status" className="flex flex-col items-start gap-[16px] border-y border-black/[0.26] px-[42px] py-[48px] max-notebook:px-[8px]">
-                <p className="font-sans text-[22px] font-medium text-[#050505]">Your bag is empty</p>
-                <p className="font-sans text-[18px] text-black/50">Add products from the catalog and they will show up here.</p>
-                <Link
-                  href="/home/products"
-                  className="mt-[8px] rounded-[200px] bg-[#050505] px-[31px] py-[15px] font-display text-[18px] font-medium text-white transition-opacity duration-200 hover:opacity-80"
-                >
-                  Go to products
-                </Link>
+                <p className="font-sans text-[22px] font-medium text-[#050505]">{loading ? "Loading your bag…" : error ? "We could not load your bag" : "Your bag is empty"}</p>
+                {error ? (
+                  <p className="font-sans text-[18px] text-black/50">{error}</p>
+                ) : (
+                  !loading && <p className="font-sans text-[18px] text-black/50">Add products from the catalog and they will show up here.</p>
+                )}
+                {!loading && !error && (
+                  <Link
+                    href="/home/products"
+                    className="mt-[8px] rounded-[200px] bg-[#050505] px-[31px] py-[15px] font-display text-[18px] font-medium text-white transition-opacity duration-200 hover:opacity-80"
+                  >
+                    Go to products
+                  </Link>
+                )}
               </div>
             )}
           </div>
 
           {/* Right: payment details */}
           <div className="min-w-0 flex-[572] max-notebook:flex-none">
-            <BagPayment items={items} subtotal={subtotal} taxRate={TAX_RATE} />
+            <BagPayment cart={cart} />
           </div>
         </div>
       </div>

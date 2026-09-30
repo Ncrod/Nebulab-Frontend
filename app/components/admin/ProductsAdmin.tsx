@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { CATEGORIES, LOW_STOCK, type CatalogProduct, type Category, type ProductStatus } from "../../data/catalog";
+import { errorMessage } from "../../lib/api";
 import { deleteProducts, setProductStatus, useProducts } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
 import { EditIcon, TrashIcon } from "./AdminIcons";
@@ -17,7 +18,7 @@ const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, ""
 
 /** Products section: every product of the catalog in a table, with create, edit, enable/disable and delete. */
 export default function ProductsAdmin() {
-  const products = useProducts();
+  const { data: products, loading, error } = useProducts();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [category, setCategory] = useState<Category | "all">("all");
@@ -70,8 +71,10 @@ export default function ProductsAdmin() {
               label: PRODUCT_STATUS[s].label,
               selected: p.status === s,
               onSelect: () => {
-                setProductStatus([p.id], s);
-                showToast(`${p.name} is now ${PRODUCT_STATUS[s].label.toLowerCase()}`);
+                setProductStatus([p.id], s).then(
+                  () => showToast(`${p.name} is now ${PRODUCT_STATUS[s].label.toLowerCase()}`),
+                  (failure) => showToast(errorMessage(failure)),
+                );
               },
             }))}
           >
@@ -127,18 +130,26 @@ export default function ProductsAdmin() {
 
   const live = products.filter((p) => p.status === "live").length;
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!toDelete) return;
-    deleteProducts(toDelete.map((p) => p.id));
-    showToast(toDelete.length === 1 ? `${toDelete[0].name} deleted` : `${toDelete.length} products deleted`);
+    try {
+      await deleteProducts(toDelete.map((p) => p.id));
+      showToast(toDelete.length === 1 ? `${toDelete[0].name} deleted` : `${toDelete.length} products deleted`);
+    } catch (failure) {
+      showToast(errorMessage(failure));
+    }
     setSelected([]);
     setToDelete(null);
     setEditing(null);
   }
 
-  function bulkStatus(next: ProductStatus) {
-    setProductStatus(selectedIds, next);
-    showToast(`${selectedIds.length} product${selectedIds.length === 1 ? "" : "s"} ${next === "live" ? "enabled" : "disabled"}`);
+  async function bulkStatus(next: ProductStatus) {
+    try {
+      await setProductStatus(selectedIds, next);
+      showToast(`${selectedIds.length} product${selectedIds.length === 1 ? "" : "s"} ${next === "live" ? "enabled" : "disabled"}`);
+    } catch (failure) {
+      showToast(errorMessage(failure));
+    }
     setSelected([]);
   }
 
@@ -187,6 +198,8 @@ export default function ProductsAdmin() {
         onRowClick={setEditing}
         defaultSort={{ id: "updated", dir: "desc" }}
         resetKey={`${query}|${status}|${category}`}
+        loading={loading}
+        error={error}
         caption="Products"
         emptyTitle="No products found"
         emptyText={products.length === 0 ? "Create the first product of the store." : "Try another word or clear the filters."}

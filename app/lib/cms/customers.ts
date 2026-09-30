@@ -1,14 +1,15 @@
 "use client";
 
-import { createStore } from "./store";
-import { getDemoData } from "./demo-data";
-import { isRevenue, type Customer, type CustomerStatus, type Order } from "./types";
+import { api, apiAll } from "../api";
+import { createResource } from "../resource";
+import type { Customer, CustomerStatus } from "./types";
 
-const store = createStore<Customer[]>("nebulab-cms-customers", () => getDemoData().customers, []);
+// The customers of the store, from the API. Orders count, total spent and last order come with each customer.
+
+const store = createResource(() => apiAll<Customer>("/admin/customers/", { session: "admin" }), [] as Customer[], "admin");
 
 export const useCustomers = store.use;
-export const readCustomers = store.read;
-export const resetCustomers = store.reset;
+export const invalidateCustomers = store.invalidate;
 
 export type CustomerInput = Pick<Customer, "name" | "email" | "notes">;
 
@@ -18,63 +19,31 @@ export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export function findCustomerByEmail(customers: Customer[], email: string) {
   const wanted = normalizeEmail(email);
-  return customers.find((customer) => customer.email === wanted);
+  return customers.find((customer) => customer.email.toLowerCase() === wanted);
 }
 
-function nextId(customers: Customer[]) {
-  const next = customers.reduce((max, c) => Math.max(max, Number(c.id.replace("cus_", "")) || 0), 0) + 1;
-  return `cus_${String(next).padStart(3, "0")}`;
-}
-
-/** Creates (no id) or updates (with id) a customer. */
-export function saveCustomer(input: CustomerInput, id?: string): Customer {
-  const clean = { ...input, name: input.name.trim(), email: normalizeEmail(input.email) };
-  const customers = store.read();
-  if (id === undefined) {
-    const created: Customer = { ...clean, id: nextId(customers), status: "active", createdAt: new Date().toISOString() };
-    store.write([created, ...customers]);
-    return created;
-  }
-  let saved!: Customer;
-  store.write(
-    customers.map((customer) => {
-      if (customer.id !== id) return customer;
-      saved = { ...customer, ...clean };
-      return saved;
-    }),
-  );
+/** Creates (no id) or updates (with id) a customer. Returns the saved one; throws ApiError with the field errors. */
+export async function saveCustomer(input: CustomerInput, id?: number): Promise<Customer> {
+  const body = { name: input.name.trim(), email: normalizeEmail(input.email), notes: input.notes };
+  const saved = await api<Customer>(id === undefined ? "/admin/customers/" : `/admin/customers/${id}/`, { method: id === undefined ? "POST" : "PATCH", session: "admin", body });
+  store.update((customers) => (id === undefined ? [saved, ...customers] : customers.map((customer) => (customer.id === saved.id ? saved : customer))));
   return saved;
 }
 
-/** The customer of a checkout: the one with that email, or a new one made from what the payment form knows. */
-export function findOrCreateCustomer(name: string, email: string): Customer {
-  return findCustomerByEmail(store.read(), email) ?? saveCustomer({ ...emptyCustomer(), name, email });
+export async function setCustomerStatus(ids: number[], status: CustomerStatus) {
+  const results = await Promise.allSettled(ids.map((id) => api<Customer>(`/admin/customers/${id}/`, { method: "PATCH", session: "admin", body: { status } })));
+  const updated = new Map<number, Customer>();
+  for (const result of results) if (result.status === "fulfilled") updated.set(result.value.id, result.value);
+  store.update((customers) => customers.map((customer) => updated.get(customer.id) ?? customer));
+  const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (failed) throw failed.reason;
 }
 
-export function setCustomerStatus(id: string, status: CustomerStatus) {
-  store.update((customers) => customers.map((customer) => (customer.id === id ? { ...customer, status } : customer)));
-}
-
-export function deleteCustomers(ids: string[]) {
-  store.update((customers) => customers.filter((customer) => !ids.includes(customer.id)));
-}
-
-export interface CustomerStats {
-  orders: number;
-  /** Money from the orders that count as revenue. */
-  spent: number;
-  lastOrderAt: string | null;
-}
-
-/** Orders, total spent and last purchase of every customer, by customer id. */
-export function customerStats(orders: Order[]): Map<string, CustomerStats> {
-  const stats = new Map<string, CustomerStats>();
-  for (const order of orders) {
-    const current = stats.get(order.customerId) ?? { orders: 0, spent: 0, lastOrderAt: null };
-    current.orders += 1;
-    if (isRevenue(order)) current.spent += order.total;
-    if (!current.lastOrderAt || order.createdAt > current.lastOrderAt) current.lastOrderAt = order.createdAt;
-    stats.set(order.customerId, current);
-  }
-  return stats;
+/** Their orders stay in Sales. */
+export async function deleteCustomers(ids: number[]) {
+  const results = await Promise.allSettled(ids.map((id) => api<void>(`/admin/customers/${id}/`, { method: "DELETE", session: "admin" })));
+  const done = ids.filter((_, i) => results[i].status === "fulfilled");
+  store.update((customers) => customers.filter((customer) => !done.includes(customer.id)));
+  const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (failed) throw failed.reason;
 }

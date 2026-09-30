@@ -1,8 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-
-// Provisional: this will be the name the user typed when signing up, once there is auth.
-const PROVISIONAL_NAME = "Iván Mateo";
+import type { MouseEvent } from "react";
+import { useSession } from "../lib/api";
+import { signOutCustomer } from "../lib/auth";
 
 const fade = "bg-[linear-gradient(to_bottom,#fff_6.335%,#050505_99.97%)] bg-clip-text text-transparent";
 
@@ -11,6 +13,15 @@ const fade = "bg-[linear-gradient(to_bottom,#fff_6.335%,#050505_99.97%)] bg-clip
  * horizon at the bottom.
  */
 export default function AccountGreeting() {
+  const name = useSession("customer")?.user.name ?? "";
+
+  // Ends the session and reloads the public home: nothing of the account stays in memory.
+  function signOut(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    void signOutCustomer();
+    window.location.replace("/");
+  }
+
   return (
     <section className="relative flex min-h-[997px] flex-col items-center gap-[28px] px-section pt-[116px] max-notebook:min-h-[720px] max-notebook:pt-[80px] max-tablet:min-h-[600px] max-tablet:pt-[64px]">
       {/* Soft light in the top-left corner, same glow as the hero. */}
@@ -53,12 +64,12 @@ export default function AccountGreeting() {
 
       <h1 className="relative flex w-full max-w-[1446px] flex-col items-center gap-[2px] text-center font-display font-medium leading-normal [word-break:break-word]">
         <span className={`${fade} block w-full text-[90px] max-notebook:text-[60px] max-tablet:text-[40px]`}>Hello</span>
-        <span className={`${fade} block w-full text-[128px] max-notebook:text-[84px] max-tablet:text-[52px]`}>{PROVISIONAL_NAME}</span>
+        <span className={`${fade} block w-full text-[128px] max-notebook:text-[84px] max-tablet:text-[52px]`}>{name}</span>
       </h1>
 
-      {/* Without auth there is no session to end, so for now this just goes back to the public home. */}
       <Link
         href="/"
+        onClick={signOut}
         className="relative flex h-[60px] w-[308px] max-w-full items-center justify-center rounded-[200px] bg-white px-[31px] py-[8px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-[#050505] transition-opacity duration-200 hover:opacity-80"
       >
         Sign Out

@@ -1,24 +1,28 @@
 "use client";
 
 import { notFound } from "next/navigation";
-import { useProducts } from "../lib/cms/products";
-import { useHydrated } from "../lib/cms/store";
+import { useProduct } from "../lib/cms/products";
 import ProductDetailPage from "./ProductDetailPage";
 
 /**
- * Finds the product behind a /products/<slug> URL in the CMS store (the admin can add products the server has never
- * seen, so the lookup happens in the browser). Disabled or missing products answer 404.
- * The server renders with the seed catalog; until the browser has read its storage an unknown slug shows an empty page
+ * Loads the product behind a /products/<slug> URL from the API (the admin can add products the server-rendered page has never
+ * seen, so the lookup happens in the browser). Disabled or missing products answer 404. While it loads, an empty page shows
  * instead of jumping to the 404 too early.
  */
 export default function ProductDetailLoader({ slug, loggedIn = false }: { slug: string; loggedIn?: boolean }) {
-  const products = useProducts();
-  const hydrated = useHydrated();
-  const product = products.find((p) => p.slug === slug && p.status === "live");
+  const { product, notFound: missing, error } = useProduct(slug);
 
   if (!product) {
-    if (!hydrated) return <main className="min-h-screen" />;
-    notFound();
+    if (missing) notFound();
+    return (
+      <main className="min-h-screen">
+        {error && (
+          <p role="alert" className="px-section py-[120px] text-center font-display text-[20px] text-white/60">
+            {error}
+          </p>
+        )}
+      </main>
+    );
   }
   return <ProductDetailPage loggedIn={loggedIn} product={product} />;
 }

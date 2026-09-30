@@ -3,10 +3,14 @@
 import Image from "next/image";
 import { useState, type KeyboardEvent } from "react";
 import { CATEGORIES, slugify, type CatalogProduct, type Category, type ProductOption, type ProductStatus } from "../../data/catalog";
+import { ApiError, errorMessage } from "../../lib/api";
 import { emptyProduct, isSlugTaken, saveProduct, useProducts, type ProductInput } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
 import { CloseIcon, PlusIcon, TrashIcon } from "./AdminIcons";
 import { btnDanger, btnGhost, btnPrimary, Drawer, Field, iconBtn, inputCls, Select, textareaCls, Toggle } from "./ui";
+
+/** The fields of the form that show an error message under them. */
+const FORM_FIELDS = ["name", "slug", "category", "price", "stock", "image", "options"];
 
 const PLACEHOLDER_IMAGE = "/images/catalog/airpods-pro-2.png";
 
@@ -81,11 +85,12 @@ export default function ProductEditor({
   onClose: () => void;
   onDelete: (product: CatalogProduct) => void;
 }) {
-  const products = useProducts();
+  const { data: products } = useProducts();
   const [form, setForm] = useState<ProductInput>(() => (product ? { ...product, options: product.options.map((o) => ({ ...o, values: [...o.values] })) } : emptyProduct()));
   // A new product's slug follows its name until the admin types their own.
   const [slugTouched, setSlugTouched] = useState(product !== null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof ProductInput>(key: K, value: ProductInput[K]) => setForm((f) => ({ ...f, [key]: value }));
   const slug = slugTouched ? form.slug : slugify(form.name);
@@ -94,7 +99,8 @@ export default function ProductEditor({
     set("options", form.options.map((o, i) => (i === index ? { ...o, ...change } : o)));
   }
 
-  function submit() {
+  async function submit() {
+    if (saving) return;
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = "The product needs a name.";
     if (!slug) next.slug = "The slug cannot be empty.";
@@ -106,12 +112,22 @@ export default function ProductEditor({
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    const saved = saveProduct(
-      { ...form, name: form.name.trim(), slug, description: form.description.trim(), options: form.options.map((o) => ({ ...o, name: o.name.trim() })) },
-      product?.id,
-    );
-    showToast(product ? `${saved.name} updated` : `${saved.name} created`);
-    onClose();
+    setSaving(true);
+    try {
+      const saved = await saveProduct(
+        { ...form, name: form.name.trim(), slug, description: form.description.trim(), options: form.options.map((o) => ({ ...o, name: o.name.trim() })) },
+        product?.id,
+      );
+      showToast(product ? `${saved.name} updated` : `${saved.name} created`);
+      onClose();
+    } catch (failure) {
+      // The server checks everything again: its messages go under the field they belong to.
+      const fields = failure instanceof ApiError ? failure.fields : {};
+      const shown = Object.keys(fields).some((key) => FORM_FIELDS.includes(key));
+      setErrors(shown ? fields : { name: errorMessage(failure) });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -132,7 +148,7 @@ export default function ProductEditor({
           <button type="button" onClick={onClose} className={btnGhost}>
             Cancel
           </button>
-          <button type="button" onClick={submit} className={btnPrimary}>
+          <button type="button" onClick={submit} disabled={saving} className={btnPrimary}>
             {product ? "Save changes" : "Create product"}
           </button>
         </>
@@ -163,7 +179,7 @@ export default function ProductEditor({
         </Field>
 
         <div className="grid grid-cols-2 gap-[16px] max-tablet:grid-cols-1">
-          <Field label="Category" htmlFor="p-category">
+          <Field label="Category" htmlFor="p-category" error={errors.category}>
             <Select<Category> id="p-category" value={form.category} onChange={(v) => set("category", v)} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
           </Field>
           <Field label="Status" htmlFor="p-status" hint="Disabled products are hidden from the store.">

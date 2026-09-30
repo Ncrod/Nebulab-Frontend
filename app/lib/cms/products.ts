@@ -1,24 +1,57 @@
 "use client";
 
-import { SEED_PRODUCTS, slugify, type CatalogProduct } from "../../data/catalog";
-import { createStore } from "./store";
+import { PAGE_SIZE, type CatalogFilter, type CatalogProduct } from "../../data/catalog";
+import { api, apiAll, type Paginated } from "../api";
+import { createResource, useDebounced, useQuery } from "../resource";
 
-// The catalog, editable. Starts as the seed of ../../data/catalog; the admin creates/edits/removes products here and
-// the shop (catalog, product page) reads the same store, so a change shows up on both sides.
+// The catalog, from the API. The shop reads the public endpoints (only live products); the CMS reads and edits every product.
 
-const store = createStore<CatalogProduct[]>("nebulab-cms-products-v2", () => SEED_PRODUCTS, SEED_PRODUCTS);
+// ── Shop ──────────────────────────────────────────────────────────────────────
+
+/** One page of the catalog with the sidebar filter and the search text applied by the server. */
+export function useCatalogPage({ filter, query, page }: { filter: CatalogFilter; query: string; page: number }) {
+  const search = useDebounced(query.trim(), 300);
+  const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+  if (filter === "new") params.set("is_new", "true");
+  else if (filter !== "all") params.set("category", filter);
+  if (search) params.set("search", search);
+  const path = `/products/?${params}`;
+
+  const result = useQuery(path, () => api<Paginated<CatalogProduct>>(path));
+  return {
+    products: result.data?.results ?? [],
+    count: result.data?.count ?? 0,
+    // While the text is still being debounced the list on screen is about to change too.
+    loading: result.loading || search !== query.trim(),
+    error: result.error,
+    /** The requested page does not exist (the catalog got shorter): the caller goes back to page 1. */
+    invalidPage: result.errorStatus === 404,
+  };
+}
+
+/** The products marked "Recommended", for the carousel of the home page. */
+const recommended = createResource(async () => (await api<Paginated<CatalogProduct>>("/products/?recommended=true&page_size=50")).results, []);
+
+export const useRecommendedProducts = () => recommended.use();
+
+/** One live product by slug. `notFound`: it does not exist or is disabled. */
+export function useProduct(slug: string) {
+  const result = useQuery(`product:${slug}`, () => api<CatalogProduct>(`/products/${encodeURIComponent(slug)}/`));
+  return {
+    product: result.data?.slug === slug ? result.data : null,
+    loading: result.loading,
+    notFound: result.errorStatus === 404,
+    error: result.error,
+  };
+}
+
+// ── CMS ───────────────────────────────────────────────────────────────────────
+
+const store = createResource(() => apiAll<CatalogProduct>("/admin/products/", { session: "admin" }), [] as CatalogProduct[], "admin");
 
 /** Every product, live and disabled (the CMS). */
 export const useProducts = store.use;
-
-/** Only what the shop may show. */
-export function useLiveProducts(): CatalogProduct[] {
-  const products = store.use();
-  return products.filter((product) => product.status === "live");
-}
-
-export const readProducts = store.read;
-export const resetProducts = store.reset;
+export const invalidateProducts = store.invalidate;
 
 /** The data of a product that the admin form edits. */
 export type ProductInput = Omit<CatalogProduct, "id" | "createdAt" | "updatedAt">;
@@ -42,48 +75,43 @@ export function isSlugTaken(products: CatalogProduct[], slug: string, exceptId?:
   return products.some((product) => product.slug === slug && product.id !== exceptId);
 }
 
-/** Creates (no id) or updates (with id) a product. Returns the saved one. */
-export function saveProduct(input: ProductInput, id?: number): CatalogProduct {
-  const now = new Date().toISOString();
-  const products = store.read();
-  const slug = slugify(input.slug || input.name);
-  if (id === undefined) {
-    const created: CatalogProduct = {
-      ...input,
-      slug,
-      id: products.reduce((max, product) => Math.max(max, product.id), 0) + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
-    store.write([created, ...products]);
-    return created;
-  }
-  let saved!: CatalogProduct;
-  store.write(
-    products.map((product) => {
-      if (product.id !== id) return product;
-      saved = { ...product, ...input, slug, updatedAt: now };
-      return saved;
-    }),
-  );
+/** Creates (no id) or updates (with id) a product. Returns the saved one; throws ApiError with the field errors. */
+export async function saveProduct(input: ProductInput, id?: number): Promise<CatalogProduct> {
+  const saved = await api<CatalogProduct>(id === undefined ? "/admin/products/" : `/admin/products/${id}/`, {
+    method: id === undefined ? "POST" : "PATCH",
+    session: "admin",
+    body: input,
+  });
+  store.update((products) => (id === undefined ? [saved, ...products] : products.map((product) => (product.id === saved.id ? saved : product))));
+  recommended.invalidate();
   return saved;
 }
 
-export function setProductStatus(ids: number[], status: CatalogProduct["status"]) {
-  const now = new Date().toISOString();
-  store.update((products) => products.map((product) => (ids.includes(product.id) ? { ...product, status, updatedAt: now } : product)));
+/** Runs one request per id. What worked is kept; if any failed, the first error is thrown afterwards. */
+async function eachId(ids: number[], request: (id: number) => Promise<void>, onDone: (doneIds: number[]) => void) {
+  const results = await Promise.allSettled(ids.map((id) => request(id)));
+  onDone(ids.filter((_, i) => results[i].status === "fulfilled"));
+  const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (failed) throw failed.reason;
 }
 
-export function deleteProducts(ids: number[]) {
-  store.update((products) => products.filter((product) => !ids.includes(product.id)));
-}
-
-/** Adds (or, with a negative delta, takes) units of stock. Never goes under 0. */
-export function adjustStock(changes: { slug: string; delta: number }[]) {
-  store.update((products) =>
-    products.map((product) => {
-      const total = changes.filter((change) => change.slug === product.slug).reduce((sum, change) => sum + change.delta, 0);
-      return total === 0 ? product : { ...product, stock: Math.max(0, product.stock + total) };
-    }),
+export async function setProductStatus(ids: number[], status: CatalogProduct["status"]) {
+  const updated = new Map<number, CatalogProduct>();
+  await eachId(
+    ids,
+    async (id) => {
+      updated.set(id, await api<CatalogProduct>(`/admin/products/${id}/`, { method: "PATCH", session: "admin", body: { status } }));
+    },
+    () => store.update((products) => products.map((product) => updated.get(product.id) ?? product)),
   );
+  recommended.invalidate();
+}
+
+export async function deleteProducts(ids: number[]) {
+  await eachId(
+    ids,
+    (id) => api<void>(`/admin/products/${id}/`, { method: "DELETE", session: "admin" }),
+    (done) => store.update((products) => products.filter((product) => !done.includes(product.id))),
+  );
+  recommended.invalidate();
 }

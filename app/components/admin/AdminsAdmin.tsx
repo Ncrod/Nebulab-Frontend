@@ -10,13 +10,13 @@ import { formatDate, initials } from "./format";
 
 /** Admins section: the people who can sign in to this CMS. Any admin can add another one or remove one. */
 export default function AdminsAdmin() {
-  const admins = useAdmins();
+  const { data: admins, loading, error } = useAdmins();
   const me = useAdminSession();
   const [creating, setCreating] = useState(false);
   const [toDelete, setToDelete] = useState<AdminUser | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const nameOf = (id: string | null) => (id ? (admins.find((a) => a.id === id)?.name ?? "Removed admin") : "—");
+  const nameOf = (admin: AdminUser) => (admin.createdBy === null ? "—" : (admin.createdByName ?? "Removed admin"));
 
   const columns: Column<AdminUser>[] = [
     {
@@ -40,7 +40,7 @@ export default function AdminsAdmin() {
       ),
     },
     { id: "created", header: "Created", minWidth: 140, sort: (a) => a.createdAt, className: "whitespace-nowrap text-[#98a2b3]", cell: (a) => formatDate(a.createdAt) },
-    { id: "by", header: "Created by", minWidth: 170, className: "text-[#98a2b3]", cell: (a) => nameOf(a.createdBy) },
+    { id: "by", header: "Created by", minWidth: 170, className: "text-[#98a2b3]", cell: nameOf },
     {
       id: "actions",
       header: "",
@@ -65,10 +65,10 @@ export default function AdminsAdmin() {
     },
   ];
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!toDelete || !me) return;
-    const error = deleteAdmin(toDelete.id, me.id);
-    if (error) return setDeleteError(error);
+    const refused = await deleteAdmin(toDelete.id);
+    if (refused) return setDeleteError(refused);
     showToast(`${toDelete.name} removed`);
     setToDelete(null);
   }
@@ -82,12 +82,14 @@ export default function AdminsAdmin() {
         columns={columns}
         getId={(a) => a.id}
         defaultSort={{ id: "created", dir: "asc" }}
+        loading={loading}
+        error={error}
         caption="Admins"
         emptyTitle="No admins"
         emptyText="Sign in again to create the first one."
       />
 
-      {creating && me && <NewAdminDrawer createdBy={me.id} onClose={() => setCreating(false)} />}
+      {creating && <NewAdminDrawer onClose={() => setCreating(false)} />}
 
       <ConfirmDialog
         open={toDelete !== null}
@@ -102,7 +104,7 @@ export default function AdminsAdmin() {
   );
 }
 
-function NewAdminDrawer({ createdBy, onClose }: { createdBy: string; onClose: () => void }) {
+function NewAdminDrawer({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -113,7 +115,7 @@ function NewAdminDrawer({ createdBy, onClose }: { createdBy: string; onClose: ()
     if (saving) return;
     if (form.password !== form.confirm) return setErrors({ confirm: "The passwords do not match." });
     setSaving(true);
-    const result = await createAdmin(form, createdBy);
+    const result = await createAdmin(form);
     setSaving(false);
     if (!result.ok) return setErrors({ [result.field]: result.error });
     showToast(`${result.admin.name} is now an admin`);

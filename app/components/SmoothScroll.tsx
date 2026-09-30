@@ -32,6 +32,16 @@ export default function SmoothScroll({ children }: { children: ReactNode }) {
     return () => gsap.ticker.remove(update);
   }, [enabled]);
 
+  // Lenis only watches the size of <html>, which has a fixed height (h-full): it never notices the page growing when content
+  // arrives later (data from the API, a page that shows once the session is known) and would keep the old, shorter scroll
+  // limit. So the body is watched too.
+  useEffect(() => {
+    if (!enabled) return;
+    const observer = new ResizeObserver(() => lenisRef.current?.lenis?.resize());
+    observer.observe(document.body);
+    return () => observer.disconnect();
+  }, [enabled]);
+
   // Lenis keeps its own scroll target, so after a page change it would pull the new page back to where the old one
   // was. New pages therefore start at the very top (the hero of the home, navbar included). Not for the
   // back/forward buttons, where the browser restores the old position, nor for links with a #anchor.

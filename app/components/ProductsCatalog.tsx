@@ -1,9 +1,9 @@
 "use client";
 
 import { useLenis } from "lenis/react";
-import { useMemo, useRef, useState } from "react";
-import { PAGE_SIZE, filterProducts, type CatalogFilter } from "../data/catalog";
-import { useLiveProducts } from "../lib/cms/products";
+import { useRef, useState } from "react";
+import { PAGE_SIZE, type CatalogFilter } from "../data/catalog";
+import { useCatalogPage } from "../lib/cms/products";
 import CatalogPagination from "./CatalogPagination";
 import CatalogProductCard from "./CatalogProductCard";
 import CatalogSearch from "./CatalogSearch";
@@ -11,7 +11,7 @@ import CatalogSidebar from "./CatalogSidebar";
 
 /**
  * Products page, section 3 (Figma 96:382): search, category list, product grid and pager.
- * Filtering, search and paging run on the products of the CMS store (../lib/cms/products): only the live ones show here.
+ * Filtering, search and paging run on the API (../lib/cms/products): only the live products show here, 9 per page.
  */
 export default function ProductsCatalog({ initialFilter = "all", loggedIn = false }: { initialFilter?: CatalogFilter; loggedIn?: boolean }) {
   const [filter, setFilter] = useState<CatalogFilter>(initialFilter);
@@ -21,11 +21,10 @@ export default function ProductsCatalog({ initialFilter = "all", loggedIn = fals
   const lenis = useLenis();
   const productsBase = loggedIn ? "/home/products" : "/products";
 
-  const products = useLiveProducts();
-
-  const results = useMemo(() => filterProducts(products, filter, query), [products, filter, query]);
-  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const visible = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { products: visible, count, loading, error, invalidPage } = useCatalogPage({ filter, query, page });
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  // The catalog got shorter and this page no longer exists: back to the first one.
+  if (invalidPage && page !== 1) setPage(1);
 
   function selectFilter(next: CatalogFilter) {
     setFilter(next);
@@ -76,6 +75,15 @@ export default function ProductsCatalog({ initialFilter = "all", loggedIn = fals
                 {visible.map((product) => (
                   <CatalogProductCard key={product.id} product={product} href={`${productsBase}/${product.slug}`} />
                 ))}
+              </div>
+            ) : loading ? (
+              <div role="status" className="flex flex-col items-center gap-[16px] py-[80px] text-center font-display text-white">
+                <p className="text-[25px] font-medium">Loading products…</p>
+              </div>
+            ) : error ? (
+              <div role="status" className="flex flex-col items-center gap-[16px] py-[80px] text-center font-display text-white">
+                <p className="text-[25px] font-medium">We could not load the products</p>
+                <p className="text-[18px] text-white/40">{error}</p>
               </div>
             ) : (
               <div role="status" className="flex flex-col items-center gap-[16px] py-[80px] text-center font-display text-white">

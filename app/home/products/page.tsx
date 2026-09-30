@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Products | Nebulab",
 };
 
-// Signed-in products. Temporary preview route: once auth exists, "/products" will render this variant by session.
+// Signed-in products. components/SessionGate sends a signed-out visit to /login, and a signed-in one on "/products" here.
 export default async function SignedInProducts({
   searchParams,
 }: {

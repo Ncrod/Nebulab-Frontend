@@ -2,11 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
-import { buildDashboard, type Delta, type RangeDays } from "../../lib/cms/metrics";
-import { useCustomers } from "../../lib/cms/customers";
-import { useOrders } from "../../lib/cms/orders";
-import { useProducts } from "../../lib/cms/products";
+import { useState, type ReactNode } from "react";
+import { useDashboard, type Delta, type RangeDays } from "../../lib/cms/metrics";
 import type { OrderStatus } from "../../lib/cms/types";
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon } from "./AdminIcons";
 import RevenueChart from "./RevenueChart";
@@ -57,14 +54,10 @@ function Empty({ children }: { children: ReactNode }) {
   return <p className="m-0 py-[24px] text-center font-sans text-[14px] text-[#98a2b3]">{children}</p>;
 }
 
-/** Dashboard: the numbers of the store for a period (revenue, orders, customers), the charts behind them and what needs attention. */
+/** Dashboard: the numbers of the store for a period (revenue, orders, customers), the charts behind them and what needs attention. All of it comes from the server. */
 export default function DashboardView() {
-  const orders = useOrders();
-  const customers = useCustomers();
-  const products = useProducts();
   const [days, setDays] = useState<RangeDays>(30);
-
-  const d = useMemo(() => buildDashboard(orders, customers, products, days), [orders, customers, products, days]);
+  const { dashboard: d, loading, error } = useDashboard(days);
   const categoryMax = Math.max(...d.byCategory.map((c) => c.revenue), 1);
   const productMax = Math.max(...d.topProducts.map((p) => p.revenue), 1);
   const statusTotal = d.byStatus.reduce((sum, s) => sum + s.count, 0);
@@ -79,7 +72,7 @@ export default function DashboardView() {
     <>
       <PageHeader
         title="Dashboard"
-        description="How the store is doing."
+        description={error ? `We could not load the numbers: ${error}` : loading ? "Loading… the server can take a few seconds to wake up." : "How the store is doing."}
         action={
           <Segmented<RangeDays>
             ariaLabel="Period"
