@@ -8,7 +8,7 @@ import type { Product } from "./ProductCard";
 const cardImage = "absolute inset-0 size-full object-cover";
 
 // The home carousel shows the products marked "Recommended" in the CMS (the API's `recommended=true` list). These five have their own cut-out art, cropped
-// by hand; any other product uses its catalog photo (a wide render) with the same crop as the catalog cards.
+// by hand; any other product shows its catalog photo whole, like the catalog cards do.
 const ART: Record<string, Pick<Product, "image" | "frameClassName" | "imageClassName">> = {
   "ipad-pro-13": { image: "/images/products/ipad-pro.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
   "iphone-18-pro-max": { image: "/images/products/iphone.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
@@ -25,9 +25,10 @@ const ART: Record<string, Pick<Product, "image" | "frameClassName" | "imageClass
   "macbook-air-13-m4": { image: "/images/products/macbook-air.png", frameClassName: "left-px top-[-17px] size-[348px]", imageClassName: cardImage },
 };
 
-const WIDE_RENDER = {
-  frameClassName: "left-[30.5px] top-[41px] h-[232.39px] w-[288.727px] overflow-hidden",
-  imageClassName: "absolute left-[-54.05%] top-[-13.28%] h-[145.45%] w-[208.13%]",
+// Any other product: its own photo, shown whole inside the preview area (fit, not cropped).
+const FIT = {
+  frameClassName: "inset-[10px]",
+  imageClassName: "absolute inset-0 size-full object-contain",
 };
 
 export default function Featured({ loggedIn = false }: { loggedIn?: boolean }) {
@@ -36,7 +37,7 @@ export default function Featured({ loggedIn = false }: { loggedIn?: boolean }) {
     name: product.name,
     price: product.price,
     href: `${productsBase}/${product.slug}`,
-    ...(ART[product.slug] ?? { image: product.image, ...WIDE_RENDER }),
+    ...(ART[product.slug] ?? { image: product.image, ...FIT }),
   }));
 
   return (
