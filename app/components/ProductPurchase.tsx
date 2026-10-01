@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "../lib/api";
 import { addToCart } from "../lib/cart";
 import { showToast } from "../lib/toast";
-import { isValueInStock, LOW_STOCK, type CatalogProduct, type ProductVariant } from "../data/catalog";
+import { isValueInStock, type CatalogProduct, type ProductVariant } from "../data/catalog";
 
 const optionTitle = "font-display text-[32px] font-medium leading-[1.045] text-black max-tablet:text-[25px]";
 // Hover and selected look the same: dark button, white text.
@@ -67,7 +67,6 @@ export default function ProductPurchase({
   // With variants the one chosen decides: a combination that was never configured cannot be bought.
   const unavailable = product.variants.length > 0 && missing.length === 0 && (variant === null || variant.stock <= 0);
   const complete = missing.length === 0 && !soldOut && !unavailable;
-  const left = variant ? variant.stock : product.stock;
 
   /** Sends the product and its chosen options to the bag (the server sets name, price and photo). False when it was refused. */
   async function addCurrent(): Promise<boolean> {
@@ -99,12 +98,12 @@ export default function ProductPurchase({
     if (await addCurrent()) router.push("/bag");
   }
 
-  /** The line under the buttons: what is still to be chosen, or what is left of what is chosen. */
+  /** The line under the buttons: what is still to be chosen. Stock itself is never a number shown to the shopper — it
+      only decides which buttons are disabled. */
   function hint() {
     if (soldOut) return "This product is sold out for now.";
     if (missing.length > 0) return `Choose ${listOf(missing.map((option) => option.name))} to add this product to your bag.`;
     if (unavailable) return "That combination is not available. Try another one.";
-    if (left > 0 && left <= LOW_STOCK) return `Only ${left} left of this combination.`;
     return null;
   }
 

@@ -356,6 +356,14 @@ export default function ProductEditor({
                   <div className="min-w-0">
                     <p className="m-0 truncate font-sans text-[14px] text-white">{combinationLabel(variant.options)}</p>
                     {variant.stock === 0 && <p className="m-0 font-sans text-[12px] text-[#ff8a80]">Sold out</p>}
+                    <input
+                      aria-label={`SKU of ${combinationLabel(variant.options)}`}
+                      value={variant.sku ?? ""}
+                      onChange={(e) => setVariant(i, { sku: e.target.value })}
+                      placeholder="SKU (optional)"
+                      maxLength={60}
+                      className="mt-[4px] h-[26px] w-full max-w-[200px] rounded-[6px] border border-white/[0.1] bg-transparent px-[8px] font-sans text-[12px] text-[#98a2b3] outline-none placeholder:text-[#98a2b3]/40 focus:border-white/30"
+                    />
                   </div>
                   <input
                     aria-label={`Price of ${combinationLabel(variant.options)}`}

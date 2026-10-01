@@ -65,6 +65,9 @@ export interface CatalogProduct {
    * combination) and `stock` the sum of them — both computed by the server.
    */
   variants: ProductVariant[];
+  /** The cheapest and the dearest combination, computed by the server. Equal to `price` when there are no variants. */
+  priceMin?: number;
+  priceMax?: number;
   status: ProductStatus;
   /** Units in stock. With variants it is the sum of their stock. 0 = sold out. */
   stock: number;
@@ -154,8 +157,9 @@ export function isCombinationInStock(product: Pick<CatalogProduct, "variants" | 
   return product.variants.some((variant) => variant.stock > 0 && chosen.every((choice) => carries(variant, choice.name, choice.value)));
 }
 
-/** The cheapest and the dearest combination. Without variants both are the product's price. */
-export function priceRange(product: Pick<CatalogProduct, "variants" | "price">): { min: number; max: number } {
+/** The cheapest and the dearest combination. Without variants both are the product's price. The server computes them (`priceMin`/`priceMax`); this only covers a product read before the server sent those two fields. */
+export function priceRange(product: Pick<CatalogProduct, "variants" | "price" | "priceMin" | "priceMax">): { min: number; max: number } {
+  if (product.priceMin !== undefined && product.priceMax !== undefined) return { min: product.priceMin, max: product.priceMax };
   if (product.variants.length === 0) return { min: product.price, max: product.price };
   const prices = product.variants.map((variant) => variant.price);
   return { min: Math.min(...prices), max: Math.max(...prices) };

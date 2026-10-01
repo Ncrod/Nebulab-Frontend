@@ -9,6 +9,7 @@ import { showToast } from "../lib/toast";
 /** One line of the order: photo, name, unit price, chosen options and the quantity pill. */
 export default function BagItem({ item }: { item: CartItem }) {
   const [busy, setBusy] = useState(false);
+  const atStock = item.quantity >= item.stock;
 
   /** The server takes the final quantity (0 removes the line) and answers with the whole cart. */
   async function setQuantity(quantity: number) {
@@ -60,13 +61,18 @@ export default function BagItem({ item }: { item: CartItem }) {
             <button
               type="button"
               onClick={() => setQuantity(item.quantity + 1)}
-              aria-label={`One more ${item.name}`}
-              className="flex size-[29.032px] shrink-0 cursor-pointer items-center justify-center max-desktop:size-[22px]"
+              disabled={atStock}
+              aria-label={atStock ? `No more ${item.name} in stock` : `One more ${item.name}`}
+              className="flex size-[29.032px] shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-30 enabled:cursor-pointer max-desktop:size-[22px]"
             >
               <Image src="/svg/bag/plus.svg" alt="" width={29} height={29} className="size-full" />
             </button>
           </div>
         </div>
+
+        {atStock && (
+          <p className="font-sans text-[14px] leading-normal text-black/50">Only {item.stock} left in stock.</p>
+        )}
       </div>
     </li>
   );

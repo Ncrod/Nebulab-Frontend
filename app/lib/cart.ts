@@ -21,6 +21,10 @@ export interface CartItem {
   image: string;
   options: ChosenOption[];
   quantity: number;
+  /** The variant this line was added for, or null when the product has no variants. */
+  variantId: number | null;
+  /** Units left of that exact combination (or of the product, without variants): caps the quantity stepper. */
+  stock: number;
 }
 
 export interface Cart {

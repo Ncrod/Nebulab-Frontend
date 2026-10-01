@@ -158,7 +158,8 @@ function fieldErrors(data: unknown): Record<string, string> {
   for (const [key, value] of Object.entries(data)) {
     if (key === "detail") continue;
     if (typeof value === "string") out[key] = value;
-    else if (Array.isArray(value) && typeof value[0] === "string") out[key] = value[0];
+    // Usually one message; `variants` can carry one per invalid combination ("Combination 2: ...", "Combination 5: ...").
+    else if (Array.isArray(value) && typeof value[0] === "string") out[key] = value.join(" ");
     else if (value && typeof value === "object") Object.assign(out, fieldErrors(value));
   }
   return out;
