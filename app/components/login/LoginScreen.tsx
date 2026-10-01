@@ -6,18 +6,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { errorMessage, useSession } from "../../lib/api";
-import { requestPasswordReset, signInCustomer, signUpCustomer } from "../../lib/auth";
+import { confirmPasswordReset, requestPasswordReset, signInCustomer, signUpCustomer } from "../../lib/auth";
 import { signInAdmin, useAdminSession } from "../../lib/cms/admin-auth";
 import { showToast } from "../../lib/toast";
 import styles from "../../login/login.module.css";
 
 const MoltenPanes = dynamic(() => import("./molten-panes"), { ssr: false });
 
-type Mode = "login" | "signup" | "forgot";
+const MIN_PASSWORD = 8;
+
+type Mode = "login" | "signup" | "forgot" | "reset";
 
 // The shop's forms (sign in, sign up, reset password) talk to the API through ../../lib/auth. The "admin" variant is the
 // CMS login (/login-admin): sign in only, and only accounts with the admin role get in (../../lib/cms/admin-auth).
-export function LoginScreen({ initialMode = "login", variant = "shop" }: { initialMode?: Mode; variant?: "shop" | "admin" }) {
+// "reset" is reached from the link emailed for "forgot": it sets the new password with the token in the URL
+// (`resetToken`), not with a session, so it works for a signed-out visitor.
+export function LoginScreen({
+  initialMode = "login",
+  variant = "shop",
+  resetToken = null,
+}: {
+  initialMode?: Mode;
+  variant?: "shop" | "admin";
+  /** The `?token=` of /reset-password. null when the link had none, which is treated as an invalid link. */
+  resetToken?: string | null;
+}) {
   const isAdmin = variant === "admin";
   const router = useRouter();
   const adminSession = useAdminSession();
@@ -27,11 +40,13 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Already signed in: straight to the CMS, or to the signed-in store.
+  // Already signed in: straight to the CMS, or to the signed-in store. Not for "reset": a visitor following the
+  // emailed link may well still have an old session open.
   useEffect(() => {
+    if (mode === "reset") return;
     if (isAdmin && adminSession) router.replace("/admin");
     if (!isAdmin && customerSession) router.replace("/home");
-  }, [isAdmin, adminSession, customerSession, router]);
+  }, [mode, isAdmin, adminSession, customerSession, router]);
 
   function switchMode(next: Mode) {
     setError(null);
@@ -47,7 +62,15 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
     setBusy(true);
     setError(null);
     try {
-      if (isAdmin) {
+      if (mode === "reset") {
+        const confirmPassword = String(data.get("confirmPassword") ?? "");
+        if (password !== confirmPassword) return setError("Those passwords don't match.");
+        if (password.length < MIN_PASSWORD) return setError(`Use at least ${MIN_PASSWORD} characters.`);
+        if (!resetToken) return setError("This link is invalid or has expired. Request a new one.");
+        await confirmPasswordReset(resetToken, password);
+        showToast("Password updated. Sign in with your new password.");
+        router.replace("/login");
+      } else if (isAdmin) {
         if (!(await signInAdmin(email, password))) return setError("Wrong email or password.");
         router.replace("/admin");
       } else if (mode === "signup") {
@@ -62,6 +85,7 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
         router.replace("/home");
       }
     } catch (failure) {
+      // A bad or expired token answers 400 under `detail`, a weak password under `password`; errorMessage reads either.
       setError(errorMessage(failure));
     } finally {
       setBusy(false);
@@ -94,8 +118,11 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
   const isLogin = mode === "login";
   const isSignup = mode === "signup";
   const isForgot = mode === "forgot";
+  const isReset = mode === "reset";
+  // No token in the URL: the link is broken or was already used. There is nothing to submit, so the form does not show.
+  const brokenResetLink = isReset && !resetToken;
 
-  const submitLabel = isLogin ? "Sign in" : isSignup ? "Create account" : "Send email";
+  const submitLabel = isLogin ? "Sign in" : isSignup ? "Create account" : isReset ? "Reset password" : "Send email";
 
   return (
     <div className={styles.page}>
@@ -119,7 +146,19 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
             <div className={styles.sizer} style={formHeight === null ? undefined : { height: formHeight }}>
               <div ref={pageRef} className="t-page">
                 {isForgot && <p className={styles.subtitle}>Reset your password</p>}
+                {isReset && <p className={styles.subtitle}>Choose a new password</p>}
                 {isAdmin && <p className={styles.subtitle}>Admin access</p>}
+
+                {brokenResetLink ? (
+                  <>
+                    <p className={styles.error}>This link is invalid or has expired. Request a new one from the sign in page.</p>
+                    <p className={styles.footer}>
+                      <Link href="/login" className={styles.link}>
+                        Back to sign in
+                      </Link>
+                    </p>
+                  </>
+                ) : (
                 <form className={styles.form} onSubmit={handleSubmit}>
                   <div className={styles.fields}>
                     {isSignup && (
@@ -129,12 +168,14 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                       </div>
                     )}
 
-                    <div className={styles.field}>
-                      <label htmlFor="email" className={styles.label}>Email</label>
-                      <input id="email" name="email" type="email" autoComplete="email" placeholder="your@email.com" required onChange={() => setError(null)} className={styles.input} />
-                    </div>
+                    {!isReset && (
+                      <div className={styles.field}>
+                        <label htmlFor="email" className={styles.label}>Email</label>
+                        <input id="email" name="email" type="email" autoComplete="email" placeholder="your@email.com" required onChange={() => setError(null)} className={styles.input} />
+                      </div>
+                    )}
 
-                    {!isForgot && (
+                    {!isForgot && !isReset && (
                       <div className={styles.field}>
                         <label htmlFor="password" className={styles.label}>Password</label>
                         <div className={styles.passwordWrap}>
@@ -160,6 +201,50 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                         </div>
                       </div>
                     )}
+
+                    {isReset && (
+                      <>
+                        <div className={styles.field}>
+                          <label htmlFor="password" className={styles.label}>New password</label>
+                          <div className={styles.passwordWrap}>
+                            <input
+                              id="password"
+                              name="password"
+                              required
+                              minLength={MIN_PASSWORD}
+                              onChange={() => setError(null)}
+                              type={showPassword ? "text" : "password"}
+                              autoComplete="new-password"
+                              placeholder="••••••••"
+                              className={`${styles.input} ${styles.passwordInput}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((v) => !v)}
+                              className={styles.eye}
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                              <EyeIcon className={showPassword ? undefined : styles.iconHidden} />
+                              <EyeOffIcon className={showPassword ? styles.iconHidden : undefined} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className={styles.field}>
+                          <label htmlFor="confirmPassword" className={styles.label}>Confirm password</label>
+                          <input
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            required
+                            minLength={MIN_PASSWORD}
+                            onChange={() => setError(null)}
+                            type={showPassword ? "text" : "password"}
+                            autoComplete="new-password"
+                            placeholder="••••••••"
+                            className={styles.input}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {error && (
@@ -182,6 +267,10 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                       <Link href="/" className={styles.link}>
                         Back to the store
                       </Link>
+                    ) : isReset ? (
+                      <Link href="/login" className={styles.link}>
+                        Back to sign in
+                      </Link>
                     ) : isLogin ? (
                       <button type="button" onClick={() => switchMode("forgot")} className={styles.link}>
                         ¿Forgot your password?
@@ -193,6 +282,7 @@ export function LoginScreen({ initialMode = "login", variant = "shop" }: { initi
                     )}
                   </p>
                 </form>
+                )}
               </div>
             </div>
           </div>

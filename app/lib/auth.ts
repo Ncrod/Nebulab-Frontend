@@ -24,3 +24,11 @@ export const signOutCustomer = () => logout("customer");
 export async function requestPasswordReset(email: string): Promise<void> {
   await api<void>("/auth/password-reset/", { method: "POST", body: { email: email.trim() } });
 }
+
+/**
+ * Sets a new password from the link emailed by `requestPasswordReset`. Throws ApiError: a bad or expired `token`
+ * answers under `detail` ("This link is invalid or has expired."), a weak password under `password`.
+ */
+export async function confirmPasswordReset(token: string, password: string): Promise<void> {
+  await api<void>("/auth/password-reset/confirm/", { method: "POST", body: { token, password } });
+}
