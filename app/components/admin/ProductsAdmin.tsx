@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { CATEGORIES, LOW_STOCK, type CatalogProduct, type Category, type ProductStatus } from "../../data/catalog";
+import { CATEGORIES, LOW_STOCK, priceRange, type CatalogProduct, type Category, type ProductStatus } from "../../data/catalog";
 import { errorMessage } from "../../lib/api";
 import { deleteProducts, setProductStatus, useProducts } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
@@ -87,7 +87,18 @@ export default function ProductsAdmin() {
     },
     { id: "slug", header: "Slug", minWidth: 200, sort: (p) => p.slug, className: "text-[#98a2b3]", cell: (p) => p.slug },
     { id: "category", header: "Category", minWidth: 130, sort: (p) => p.category, cell: (p) => <Badge>{p.category}</Badge> },
-    { id: "price", header: "Price", minWidth: 100, sort: (p) => p.price, align: "right", cell: (p) => formatMoney(p.price) },
+    {
+      id: "price",
+      header: "Price",
+      minWidth: 120,
+      sort: (p) => p.price,
+      align: "right",
+      // With variants the price is a range: the cheapest combination is what the store shows as "From".
+      cell: (p) => {
+        const { min, max } = priceRange(p);
+        return max > min ? `${formatMoney(min)} – ${formatMoney(max)}` : formatMoney(min);
+      },
+    },
     {
       id: "stock",
       header: "Stock",
@@ -108,7 +119,22 @@ export default function ProductsAdmin() {
       header: "Attributes",
       minWidth: 200,
       className: "text-[#98a2b3]",
-      cell: (p) => (p.options.length ? p.options.map((o) => `${o.name} (${o.values.length})`).join(" · ") : "—"),
+      cell: (p) => {
+        const attributes = p.options.map((o) => `${o.name} (${o.values.length})`).join(" · ");
+        if (!attributes) return "—";
+        const soldOut = p.variants.filter((v) => v.stock <= 0).length;
+        return (
+          <span className="min-w-0">
+            <span className="block truncate">{attributes}</span>
+            {p.variants.length > 0 && (
+              <span className="block text-[12px]">
+                {p.variants.length} combination{p.variants.length === 1 ? "" : "s"}
+                {soldOut > 0 && <span className="text-[#ff8a80]"> · {soldOut} sold out</span>}
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     { id: "updated", header: "Updated", minWidth: 130, sort: (p) => p.updatedAt, className: "whitespace-nowrap text-[#98a2b3]", cell: (p) => formatDate(p.updatedAt) },
     {

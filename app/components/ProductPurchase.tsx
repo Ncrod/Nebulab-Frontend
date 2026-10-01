@@ -6,14 +6,16 @@ import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "../lib/api";
 import { addToCart } from "../lib/cart";
 import { showToast } from "../lib/toast";
-import type { CatalogProduct } from "../data/catalog";
+import { isValueInStock, LOW_STOCK, type CatalogProduct, type ProductVariant } from "../data/catalog";
 
 const optionTitle = "font-display text-[32px] font-medium leading-[1.045] text-black max-tablet:text-[25px]";
 // Hover and selected look the same: dark button, white text.
 const option =
-  "flex items-center justify-center rounded-[15px] border px-[30px] py-[21px] font-display text-[20px] font-medium leading-[1.045] cursor-pointer transition-colors duration-200 hover:border-[#050505] hover:bg-[#050505] hover:text-white";
+  "flex items-center justify-center rounded-[15px] border px-[30px] py-[21px] font-display text-[20px] font-medium leading-[1.045] cursor-pointer transition-colors duration-200 enabled:hover:border-[#050505] enabled:hover:bg-[#050505] enabled:hover:text-white";
 const optionOff = "border-black/40 text-black";
 const optionOn = "border-[#050505] bg-[#050505] text-white";
+// A value with nothing left in stock: crossed out and not clickable (the 128GB that ran out).
+const optionGone = "cursor-not-allowed border-black/15 text-black/30 line-through";
 const action =
   "flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[200px] px-[31px] py-[23px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] transition-opacity duration-200";
 // As buttons they go dimmed while an attribute is still to be chosen; as links (signed out) they just lead to the login.
@@ -32,13 +34,28 @@ function listOf(names: string[]) {
 /**
  * The product's attributes and the two purchase buttons.
  * Each product shows only the attributes it has (several, one, or none); the shopper has to choose every one shown
- * before "Add to cart" and "Buy now" work. Signed out, both buttons lead to the login instead. Signed in, "Add to cart"
- * adds the product and stays here; "Buy now" adds it and goes to the bag.
+ * before "Add to cart" and "Buy now" work, and the values that have run out are crossed out and cannot be chosen.
+ * Signed out, both buttons lead to the login instead. Signed in, "Add to cart" adds the product and stays here;
+ * "Buy now" adds it and goes to the bag.
+ *
+ * The choices live in ProductPanel, which uses them to show the price of the chosen combination.
  */
-export default function ProductPurchase({ product, loggedIn }: { product: CatalogProduct; loggedIn: boolean }) {
+export default function ProductPurchase({
+  product,
+  loggedIn,
+  chosen,
+  onChoose,
+  variant,
+}: {
+  product: CatalogProduct;
+  loggedIn: boolean;
+  /** The chosen value of each attribute, by position in its list of values. */
+  chosen: Record<string, number>;
+  onChoose: (name: string, index: number) => void;
+  /** The combination chosen, once every attribute is; null while it is not complete or the product has no variants. */
+  variant: ProductVariant | null;
+}) {
   const router = useRouter();
-  // The chosen button of each attribute, by position (a value can repeat: the design shows "Citrus" twice).
-  const [chosen, setChosen] = useState<Record<string, number>>({});
   const [added, setAdded] = useState(false);
   const [busy, setBusy] = useState(false);
   const addedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -47,7 +64,10 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
 
   const missing = product.options.filter((option) => chosen[option.name] === undefined);
   const soldOut = product.stock <= 0;
-  const complete = missing.length === 0 && !soldOut;
+  // With variants the one chosen decides: a combination that was never configured cannot be bought.
+  const unavailable = product.variants.length > 0 && missing.length === 0 && (variant === null || variant.stock <= 0);
+  const complete = missing.length === 0 && !soldOut && !unavailable;
+  const left = variant ? variant.stock : product.stock;
 
   /** Sends the product and its chosen options to the bag (the server sets name, price and photo). False when it was refused. */
   async function addCurrent(): Promise<boolean> {
@@ -79,6 +99,17 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
     if (await addCurrent()) router.push("/bag");
   }
 
+  /** The line under the buttons: what is still to be chosen, or what is left of what is chosen. */
+  function hint() {
+    if (soldOut) return "This product is sold out for now.";
+    if (missing.length > 0) return `Choose ${listOf(missing.map((option) => option.name))} to add this product to your bag.`;
+    if (unavailable) return "That combination is not available. Try another one.";
+    if (left > 0 && left <= LOW_STOCK) return `Only ${left} left of this combination.`;
+    return null;
+  }
+
+  const message = loggedIn ? hint() : null;
+
   return (
     <>
       {product.options.length > 0 && (
@@ -92,19 +123,25 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
                 <div
                   className={`${stacked ? "flex flex-col" : "flex flex-wrap"} gap-[10px] tablet:max-notebook:grid tablet:max-notebook:grid-cols-3`}
                 >
-                  {values.map((value, i) => (
-                    <button
-                      key={`${value}-${i}`}
-                      type="button"
-                      aria-pressed={chosen[name] === i}
-                      onClick={() => setChosen((current) => ({ ...current, [name]: i }))}
-                      className={`${option} ${chosen[name] === i ? optionOn : optionOff} ${
-                        stacked ? "w-[216px] max-tablet:w-full" : "w-[200px] max-tablet:w-[calc(50%-5px)]"
-                      } tablet:max-notebook:w-full`}
-                    >
-                      {value}
-                    </button>
-                  ))}
+                  {values.map((value, i) => {
+                    const gone = !isValueInStock(product, name, value);
+                    const on = chosen[name] === i;
+                    return (
+                      <button
+                        key={`${value}-${i}`}
+                        type="button"
+                        disabled={gone}
+                        aria-pressed={on}
+                        title={gone ? `${value} is sold out` : undefined}
+                        onClick={() => onChoose(name, i)}
+                        className={`${option} ${gone ? optionGone : on ? optionOn : optionOff} ${
+                          stacked ? "w-[216px] max-tablet:w-full" : "w-[200px] max-tablet:w-[calc(50%-5px)]"
+                        } tablet:max-notebook:w-full`}
+                      >
+                        {value}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -116,10 +153,10 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
         <div className="flex items-stretch gap-[20px] max-tablet:flex-col">
           {loggedIn ? (
             <>
-              <button type="button" onClick={handleAdd} disabled={!complete} aria-describedby={complete ? undefined : "purchase-hint"} className={`${addStyle} ${asButton}`}>
+              <button type="button" onClick={handleAdd} disabled={!complete} aria-describedby={message ? "purchase-hint" : undefined} className={`${addStyle} ${asButton}`}>
                 {soldOut ? "Sold out" : added ? "Added to cart" : "Add to cart"}
               </button>
-              <button type="button" onClick={handleBuy} disabled={!complete} aria-describedby={complete ? undefined : "purchase-hint"} className={`${buyStyle} ${asButton}`}>
+              <button type="button" onClick={handleBuy} disabled={!complete} aria-describedby={message ? "purchase-hint" : undefined} className={`${buyStyle} ${asButton}`}>
                 Buy now
               </button>
             </>
@@ -135,9 +172,9 @@ export default function ProductPurchase({ product, loggedIn }: { product: Catalo
           )}
         </div>
 
-        {loggedIn && !complete && (
+        {message && (
           <p id="purchase-hint" className="font-sans text-[16px] leading-normal text-black/60">
-            {soldOut ? "This product is sold out for now." : `Choose ${listOf(missing.map((option) => option.name))} to add this product to your bag.`}
+            {message}
           </p>
         )}
       </div>

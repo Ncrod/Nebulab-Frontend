@@ -1,6 +1,6 @@
 "use client";
 
-import { PAGE_SIZE, type CatalogFilter, type CatalogProduct } from "../../data/catalog";
+import { PAGE_SIZE, readProduct, type CatalogFilter, type CatalogProduct } from "../../data/catalog";
 import { api, apiAll, type Paginated } from "../api";
 import { createResource, useDebounced, useQuery } from "../resource";
 
@@ -17,7 +17,10 @@ export function useCatalogPage({ filter, query, page }: { filter: CatalogFilter;
   if (search) params.set("search", search);
   const path = `/products/?${params}`;
 
-  const result = useQuery(path, () => api<Paginated<CatalogProduct>>(path));
+  const result = useQuery(path, async () => {
+    const page = await api<Paginated<CatalogProduct>>(path);
+    return { ...page, results: page.results.map(readProduct) };
+  });
   return {
     products: result.data?.results ?? [],
     count: result.data?.count ?? 0,
@@ -30,13 +33,13 @@ export function useCatalogPage({ filter, query, page }: { filter: CatalogFilter;
 }
 
 /** The products marked "Recommended", for the carousel of the home page. */
-const recommended = createResource(async () => (await api<Paginated<CatalogProduct>>("/products/?recommended=true&page_size=50")).results, []);
+const recommended = createResource(async () => (await api<Paginated<CatalogProduct>>("/products/?recommended=true&page_size=50")).results.map(readProduct), []);
 
 export const useRecommendedProducts = () => recommended.use();
 
 /** One live product by slug. `notFound`: it does not exist or is disabled. */
 export function useProduct(slug: string) {
-  const result = useQuery(`product:${slug}`, () => api<CatalogProduct>(`/products/${encodeURIComponent(slug)}/`));
+  const result = useQuery(`product:${slug}`, async () => readProduct(await api<CatalogProduct>(`/products/${encodeURIComponent(slug)}/`)));
   return {
     product: result.data?.slug === slug ? result.data : null,
     loading: result.loading,
@@ -47,7 +50,7 @@ export function useProduct(slug: string) {
 
 // ── CMS ───────────────────────────────────────────────────────────────────────
 
-const store = createResource(() => apiAll<CatalogProduct>("/admin/products/", { session: "admin" }), [] as CatalogProduct[], "admin");
+const store = createResource(async () => (await apiAll<CatalogProduct>("/admin/products/", { session: "admin" })).map(readProduct), [] as CatalogProduct[], "admin");
 
 /** Every product, live and disabled (the CMS). */
 export const useProducts = store.use;
@@ -65,6 +68,7 @@ export const emptyProduct = (): ProductInput => ({
   isNew: false,
   recommended: false,
   options: [],
+  variants: [],
   status: "live",
   stock: 0,
   description: "",
@@ -77,11 +81,13 @@ export function isSlugTaken(products: CatalogProduct[], slug: string, exceptId?:
 
 /** Creates (no id) or updates (with id) a product. Returns the saved one; throws ApiError with the field errors. */
 export async function saveProduct(input: ProductInput, id?: number): Promise<CatalogProduct> {
-  const saved = await api<CatalogProduct>(id === undefined ? "/admin/products/" : `/admin/products/${id}/`, {
-    method: id === undefined ? "POST" : "PATCH",
-    session: "admin",
-    body: input,
-  });
+  const saved = readProduct(
+    await api<CatalogProduct>(id === undefined ? "/admin/products/" : `/admin/products/${id}/`, {
+      method: id === undefined ? "POST" : "PATCH",
+      session: "admin",
+      body: input,
+    }),
+  );
   store.update((products) => (id === undefined ? [saved, ...products] : products.map((product) => (product.id === saved.id ? saved : product))));
   recommended.invalidate();
   return saved;
@@ -100,7 +106,7 @@ export async function setProductStatus(ids: number[], status: CatalogProduct["st
   await eachId(
     ids,
     async (id) => {
-      updated.set(id, await api<CatalogProduct>(`/admin/products/${id}/`, { method: "PATCH", session: "admin", body: { status } }));
+      updated.set(id, readProduct(await api<CatalogProduct>(`/admin/products/${id}/`, { method: "PATCH", session: "admin", body: { status } })));
     },
     () => store.update((products) => products.map((product) => updated.get(product.id) ?? product)),
   );

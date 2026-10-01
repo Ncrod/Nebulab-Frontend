@@ -2,7 +2,19 @@
 
 import Image from "next/image";
 import { useState, type KeyboardEvent } from "react";
-import { CATEGORIES, slugify, type CatalogProduct, type Category, type ProductOption, type ProductStatus } from "../../data/catalog";
+import {
+  allCombinations,
+  CATEGORIES,
+  slugify,
+  variantKey,
+  variantsStock,
+  type CatalogProduct,
+  type Category,
+  type OptionChoice,
+  type ProductOption,
+  type ProductStatus,
+  type ProductVariant,
+} from "../../data/catalog";
 import { ApiError, errorMessage } from "../../lib/api";
 import { emptyProduct, isSlugTaken, saveProduct, useProducts, type ProductInput } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
@@ -10,7 +22,7 @@ import { CloseIcon, PlusIcon, TrashIcon } from "./AdminIcons";
 import { btnDanger, btnGhost, btnPrimary, Drawer, Field, iconBtn, inputCls, Select, textareaCls, Toggle } from "./ui";
 
 /** The fields of the form that show an error message under them. */
-const FORM_FIELDS = ["name", "slug", "category", "price", "stock", "image", "options"];
+const FORM_FIELDS = ["name", "slug", "category", "price", "stock", "image", "options", "variants"];
 
 const PLACEHOLDER_IMAGE = "/images/catalog/airpods-pro-2.png";
 
@@ -65,6 +77,21 @@ function ChipInput({ values, onChange, label }: { values: string[]; onChange: (v
   );
 }
 
+/** "256GB · Black": how a combination reads in the list of variants. */
+const combinationLabel = (options: OptionChoice[]) => options.map((option) => option.value).join(" · ");
+
+/**
+ * The combinations of the current attributes, keeping the price, stock and SKU already typed for the ones that still
+ * exist. Combinations whose values were removed from an attribute disappear; new ones start at `fallbackPrice`.
+ */
+function rebuildVariants(options: ProductOption[], current: ProductVariant[], fallbackPrice: number): ProductVariant[] {
+  const byKey = new Map(current.map((variant) => [variantKey(variant.options), variant]));
+  return allCombinations(options).map((combination) => {
+    const kept = byKey.get(variantKey(combination));
+    return kept ? { ...kept, options: combination } : { options: combination, price: Number.isFinite(fallbackPrice) ? fallbackPrice : 0, stock: 0 };
+  });
+}
+
 const PRESET_OPTIONS: { label: string; option: ProductOption }[] = [
   { label: "Storage", option: { name: "Storage", values: [], layout: "stack" } },
   { label: "Color", option: { name: "Color", values: [] } },
@@ -95,8 +122,25 @@ export default function ProductEditor({
   const set = <K extends keyof ProductInput>(key: K, value: ProductInput[K]) => setForm((f) => ({ ...f, [key]: value }));
   const slug = slugTouched ? form.slug : slugify(form.name);
 
+  // With variants the price and the stock of the product are the cheapest combination and the sum of all of them: the
+  // two fields at the top stop being typed and only show what the variants add up to (the server computes the same).
+  const hasVariants = form.variants.length > 0;
+  const fromPrice = hasVariants ? Math.min(...form.variants.map((v) => (Number.isFinite(v.price) ? v.price : 0))) : form.price;
+  const totalStock = hasVariants ? variantsStock(form.variants) : form.stock;
+  const combinationsCount = allCombinations(form.options).length;
+  const complete = form.options.length > 0 && form.options.every((o) => o.values.length > 0);
+
+  /** Once the combinations exist they follow the attributes: renaming or editing values keeps the list in step. */
+  function withOptions(options: ProductOption[]) {
+    setForm((f) => ({ ...f, options, variants: f.variants.length > 0 ? rebuildVariants(options, f.variants, f.price) : f.variants }));
+  }
+
   function setOption(index: number, change: Partial<ProductOption>) {
-    set("options", form.options.map((o, i) => (i === index ? { ...o, ...change } : o)));
+    withOptions(form.options.map((o, i) => (i === index ? { ...o, ...change } : o)));
+  }
+
+  function setVariant(index: number, change: Partial<ProductVariant>) {
+    set("variants", form.variants.map((v, i) => (i === index ? { ...v, ...change } : v)));
   }
 
   async function submit() {
@@ -109,13 +153,23 @@ export default function ProductEditor({
     if (!Number.isInteger(form.stock) || form.stock < 0) next.stock = "Stock must be a whole number, 0 or more.";
     if (!isUsableImage(form.image)) next.image = "Enter an image URL starting with https:// (or a path of this site, like /images/catalog/photo.png).";
     if (form.options.some((o) => !o.name.trim() || o.values.length === 0)) next.options = "Every attribute needs a name and at least one value.";
+    if (form.variants.some((v) => !Number.isFinite(v.price) || v.price < 0)) next.variants = "Every combination needs a price of 0 or more.";
+    else if (form.variants.some((v) => !Number.isInteger(v.stock) || v.stock < 0)) next.variants = "The stock of a combination must be a whole number, 0 or more.";
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     setSaving(true);
     try {
       const saved = await saveProduct(
-        { ...form, name: form.name.trim(), slug, description: form.description.trim(), options: form.options.map((o) => ({ ...o, name: o.name.trim() })) },
+        {
+          ...form,
+          name: form.name.trim(),
+          slug,
+          description: form.description.trim(),
+          options: form.options.map((o) => ({ ...o, name: o.name.trim() })),
+          price: fromPrice,
+          stock: totalStock,
+        },
         product?.id,
       );
       showToast(product ? `${saved.name} updated` : `${saved.name} created`);
@@ -193,11 +247,11 @@ export default function ProductEditor({
               ]}
             />
           </Field>
-          <Field label="Price (USD)" htmlFor="p-price" error={errors.price}>
-            <input id="p-price" type="number" inputMode="decimal" min={0} step="0.01" value={Number.isNaN(form.price) ? "" : form.price} onChange={(e) => set("price", e.target.value === "" ? NaN : Number(e.target.value))} className={inputCls} />
+          <Field label="Price (USD)" htmlFor="p-price" error={errors.price} hint={hasVariants ? "The cheapest combination; the store shows it as “From”." : undefined}>
+            <input id="p-price" type="number" inputMode="decimal" min={0} step="0.01" disabled={hasVariants} value={hasVariants ? fromPrice : Number.isNaN(form.price) ? "" : form.price} onChange={(e) => set("price", e.target.value === "" ? NaN : Number(e.target.value))} className={inputCls} />
           </Field>
-          <Field label="Stock" htmlFor="p-stock" error={errors.stock} hint="Units available. 0 shows “Sold out”.">
-            <input id="p-stock" type="number" inputMode="numeric" min={0} step={1} value={Number.isNaN(form.stock) ? "" : form.stock} onChange={(e) => set("stock", e.target.value === "" ? NaN : Number(e.target.value))} className={inputCls} />
+          <Field label="Stock" htmlFor="p-stock" error={errors.stock} hint={hasVariants ? "The combinations added up." : "Units available. 0 shows “Sold out”."}>
+            <input id="p-stock" type="number" inputMode="numeric" min={0} step={1} disabled={hasVariants} value={hasVariants ? totalStock : Number.isNaN(form.stock) ? "" : form.stock} onChange={(e) => set("stock", e.target.value === "" ? NaN : Number(e.target.value))} className={inputCls} />
           </Field>
         </div>
 
@@ -243,7 +297,7 @@ export default function ProductEditor({
                 <div className="w-[130px] shrink-0">
                   <Select<"wrap" | "stack"> id={`p-layout-${i}`} value={option.layout ?? "wrap"} onChange={(v) => setOption(i, { layout: v })} options={[{ value: "wrap", label: "In rows" }, { value: "stack", label: "Stacked" }]} />
                 </div>
-                <button type="button" aria-label="Remove attribute" onClick={() => set("options", form.options.filter((_, j) => j !== i))} className={iconBtn}>
+                <button type="button" aria-label="Remove attribute" onClick={() => withOptions(form.options.filter((_, j) => j !== i))} className={iconBtn}>
                   <TrashIcon />
                 </button>
               </div>
@@ -259,12 +313,92 @@ export default function ProductEditor({
 
           <div className="flex flex-wrap gap-[8px]">
             {PRESET_OPTIONS.map(({ label, option }) => (
-              <button key={label} type="button" onClick={() => set("options", [...form.options, { ...option, values: [] }])} className="flex h-[36px] cursor-pointer items-center gap-[6px] rounded-full border border-white/[0.16] px-[14px] font-sans text-[14px] text-white transition-colors hover:border-white/40">
+              <button key={label} type="button" onClick={() => withOptions([...form.options, { ...option, values: [] }])} className="flex h-[36px] cursor-pointer items-center gap-[6px] rounded-full border border-white/[0.16] px-[14px] font-sans text-[14px] text-white transition-colors hover:border-white/40">
                 <PlusIcon width={14} height={14} />
                 {label}
               </button>
             ))}
           </div>
+        </div>
+        <div className="flex flex-col gap-[12px]">
+          <div className="flex items-end justify-between gap-[16px] max-tablet:flex-col max-tablet:items-stretch">
+            <div>
+              <h3 className="m-0 font-display text-[15px] font-medium text-white">Combinations</h3>
+              <p className="m-0 font-sans text-[13px] text-[#98a2b3]">
+                {complete
+                  ? "One price and one stock per combination of the attributes above. A combination with 0 units shows its button disabled in the store."
+                  : "Add the attributes and their values above; the combinations are built from them."}
+              </p>
+            </div>
+            {complete && (
+              <button
+                type="button"
+                onClick={() => set("variants", rebuildVariants(form.options, form.variants, form.price))}
+                className={`${btnGhost} h-[36px] px-[16px] text-[14px]`}
+              >
+                {hasVariants ? "Sync combinations" : `Generate ${combinationsCount} combination${combinationsCount === 1 ? "" : "s"}`}
+              </button>
+            )}
+          </div>
+
+          {hasVariants && (
+            <div className="flex flex-col gap-[8px]">
+              {/* Header of the list; on mobile every row carries its own labels instead. */}
+              <div className="grid grid-cols-[1fr_120px_100px_34px] items-center gap-[10px] px-[14px] font-sans text-[12px] uppercase tracking-[0.04em] text-[#98a2b3] max-tablet:grid-cols-[1fr_84px_68px_30px] max-tablet:gap-[6px] max-tablet:px-[10px] max-tablet:text-[11px]">
+                <span>Combination</span>
+                <span>Price (USD)</span>
+                <span>Stock</span>
+                <span />
+              </div>
+
+              {form.variants.map((variant, i) => (
+                <div key={variantKey(variant.options)} className="grid grid-cols-[1fr_120px_100px_34px] items-center gap-[10px] rounded-[12px] border border-white/[0.08] px-[14px] py-[10px] max-tablet:grid-cols-[1fr_84px_68px_30px] max-tablet:gap-[6px] max-tablet:px-[10px]">
+                  <div className="min-w-0">
+                    <p className="m-0 truncate font-sans text-[14px] text-white">{combinationLabel(variant.options)}</p>
+                    {variant.stock === 0 && <p className="m-0 font-sans text-[12px] text-[#ff8a80]">Sold out</p>}
+                  </div>
+                  <input
+                    aria-label={`Price of ${combinationLabel(variant.options)}`}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    value={Number.isNaN(variant.price) ? "" : variant.price}
+                    onChange={(e) => setVariant(i, { price: e.target.value === "" ? NaN : Number(e.target.value) })}
+                    className={`${inputCls} h-[38px] px-[10px] text-[14px]`}
+                  />
+                  <input
+                    aria-label={`Stock of ${combinationLabel(variant.options)}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={Number.isNaN(variant.stock) ? "" : variant.stock}
+                    onChange={(e) => setVariant(i, { stock: e.target.value === "" ? NaN : Number(e.target.value) })}
+                    className={`${inputCls} h-[38px] px-[10px] text-[14px]`}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove ${combinationLabel(variant.options)}`}
+                    onClick={() => set("variants", form.variants.filter((_, j) => j !== i))}
+                    className={iconBtn}
+                  >
+                    <TrashIcon width={18} height={18} />
+                  </button>
+                </div>
+              ))}
+
+              <p className="m-0 font-sans text-[13px] text-[#98a2b3]">
+                {form.variants.length} combination{form.variants.length === 1 ? "" : "s"} · from {fromPrice ? `$${fromPrice}` : "$0"} · {totalStock} units in total
+              </p>
+            </div>
+          )}
+
+          {errors.variants && (
+            <p role="alert" className="m-0 font-sans text-[13px] text-[#ff8a80]">
+              {errors.variants}
+            </p>
+          )}
         </div>
       </form>
     </Drawer>

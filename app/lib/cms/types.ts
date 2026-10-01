@@ -4,7 +4,7 @@
 import type { ChosenOption } from "../cart";
 import type { Category } from "../../data/catalog";
 
-export type { CatalogProduct as Product, ProductOption, ProductStatus, Category } from "../../data/catalog";
+export type { CatalogProduct as Product, ProductOption, ProductVariant, ProductStatus, Category } from "../../data/catalog";
 export type { ChosenOption } from "../cart";
 
 export type CustomerStatus = "active" | "blocked";

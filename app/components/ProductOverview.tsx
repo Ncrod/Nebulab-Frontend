@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { CatalogProduct } from "../data/catalog";
-import ProductPurchase from "./ProductPurchase";
+import ProductPanel from "./ProductPanel";
 
 const perks = [
   { icon: "/svg/product/shipping.svg", text: "Shop your favorite Apple products and enjoy complimentary shipping on orders over $200." },
@@ -56,21 +56,9 @@ export default function ProductOverview({ product, loggedIn = false }: { product
             </div>
           </div>
 
-          {/* Right: name, price, options and actions */}
-          <div className="flex min-w-0 flex-[695] flex-col gap-[45px] max-notebook:order-2 max-notebook:flex-none">
-            <div className="flex flex-col gap-[23px] border-b border-black/20 pb-[21px]">
-              <div className="flex flex-col gap-[15px]">
-                <h1 className="font-display text-[60px] font-medium leading-[1.045] text-black max-desktop:text-[48px] max-tablet:text-[30px]">
-                  {product.name}
-                </h1>
-                <p className="font-sans text-[24px] leading-normal text-black/75 max-desktop:text-[20px] max-tablet:text-[18px]">{product.description}</p>
-              </div>
-              <p className="font-sans text-[40px] font-medium leading-[1.045] text-black max-tablet:text-[30px]">${product.price}</p>
-            </div>
-
-            {/* Keyed by product: going to another product must not carry over the choices made on this one. */}
-            <ProductPurchase key={product.slug} product={product} loggedIn={loggedIn} />
-          </div>
+          {/* Right: name, price, options and actions. Keyed by product: going to another product must not carry over
+              the choices made on this one. */}
+          <ProductPanel key={product.slug} product={product} loggedIn={loggedIn} />
         </div>
       </div>
     </section>

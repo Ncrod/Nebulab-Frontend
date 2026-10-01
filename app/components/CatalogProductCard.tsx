@@ -1,10 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { CatalogProduct } from "../data/catalog";
+import { formatPrice, priceRange, type CatalogProduct } from "../data/catalog";
 
 /** Catalog product tile: photo, name, category, price and a "Buy now" link to the product page. */
 export default function CatalogProductCard({ product, href }: { product: CatalogProduct; href: string }) {
-  const { name, category, price, image } = product;
+  const { name, category, image } = product;
+  // Products with variants cost different amounts per combination: the tile shows the cheapest one as "From $x".
+  const { min, max } = priceRange(product);
+  const soldOut = product.stock <= 0;
 
   return (
     <article className="flex min-w-0 flex-col gap-[15px]">
@@ -28,17 +31,30 @@ export default function CatalogProductCard({ product, href }: { product: Catalog
           </Link>
           <div className="flex items-center justify-between">
             <p className="font-normal text-white/40">{category}</p>
-            <p className="font-medium text-white">${price}</p>
+            <p className="shrink-0 font-medium text-white">
+              {max > min && <span className="mr-[6px] text-[16px] font-normal text-white/40 max-desktop:text-[14px]">From</span>}
+              {formatPrice(min)}
+            </p>
           </div>
         </div>
 
-        {/* Adding needs the product's attributes chosen, so the only action here is to open its page. */}
-        <Link
-          href={href}
-          className="flex w-full items-center justify-center whitespace-nowrap rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background transition-opacity duration-200 hover:opacity-80 max-desktop:text-[16px]"
-        >
-          Buy now
-        </Link>
+        {/* Adding needs the product's attributes chosen, so the only action here is to open its page. With nothing left
+            in any combination the action goes dead instead. */}
+        {soldOut ? (
+          <p
+            aria-disabled="true"
+            className="flex w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-[200px] bg-white/30 px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background/60 max-desktop:text-[16px]"
+          >
+            Sold out
+          </p>
+        ) : (
+          <Link
+            href={href}
+            className="flex w-full items-center justify-center whitespace-nowrap rounded-[200px] bg-white px-[31px] py-[15.5px] font-display text-[20px] font-medium leading-[24.32px] tracking-[0.304px] text-background transition-opacity duration-200 hover:opacity-80 max-desktop:text-[16px]"
+          >
+            Buy now
+          </Link>
+        )}
       </div>
     </article>
   );
