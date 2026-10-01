@@ -167,6 +167,8 @@ function fieldErrors(data: unknown): Record<string, string> {
 
 /** What to show the user for any error: the server's own message, or a generic one when it could not be reached. */
 export function errorMessage(error: unknown): string {
+  // The server's 429 message ("Request was throttled. Expected available in N seconds.") is meant for logs, not shoppers.
+  if (error instanceof ApiError && error.status === 429) return "Too many requests. Try again in a few minutes.";
   if (error instanceof ApiError) return error.message;
   return "Something went wrong. Check your connection and try again.";
 }
