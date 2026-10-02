@@ -115,6 +115,12 @@ export const ShieldIcon = (p: IconProps) => (
     <path d="m9 12 2.2 2.2L15.5 10" />
   </Icon>
 );
+export const TagIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M11.5 3.5h6a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-.44 1.06l-8 8a1.5 1.5 0 0 1-2.12 0l-6.5-6.5a1.5 1.5 0 0 1 0-2.12l8-8A1.5 1.5 0 0 1 11.5 3.5Z" />
+    <circle cx="15.5" cy="8.5" r="1.5" />
+  </Icon>
+);
 export const AlertIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 4 2.8 19.5h18.4L12 4Z" />

@@ -62,7 +62,8 @@ export type ProductInput = Omit<CatalogProduct, "id" | "createdAt" | "updatedAt"
 export const emptyProduct = (): ProductInput => ({
   slug: "",
   name: "",
-  category: "Iphone",
+  // The editor fills this in as soon as the live category list loads (there is no fixed default anymore).
+  category: "",
   price: 0,
   image: "/images/catalog/airpods-pro-2.png",
   isNew: false,

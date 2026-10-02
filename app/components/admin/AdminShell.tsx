@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { signOutAdmin, useAdminSession } from "../../lib/cms/admin-auth";
-import { BoxIcon, ChevronDownIcon, DashboardIcon, LogOutIcon, MenuIcon, ReceiptIcon, ShieldIcon, StoreIcon, UsersIcon } from "./AdminIcons";
+import { BoxIcon, ChevronDownIcon, DashboardIcon, LogOutIcon, MenuIcon, ReceiptIcon, ShieldIcon, StoreIcon, TagIcon, UsersIcon } from "./AdminIcons";
 import { Dropdown, iconBtn } from "./ui";
 import { initials } from "./format";
 
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: DashboardIcon },
   { label: "Products", href: "/admin/products", icon: BoxIcon },
+  { label: "Categories", href: "/admin/categories", icon: TagIcon },
   { label: "Customers", href: "/admin/customers", icon: UsersIcon },
   { label: "Sales", href: "/admin/orders", icon: ReceiptIcon },
   { label: "Admins", href: "/admin/admins", icon: ShieldIcon },

@@ -1,21 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import {
   allCombinations,
-  CATEGORIES,
   slugify,
   variantKey,
   variantsStock,
   type CatalogProduct,
-  type Category,
   type OptionChoice,
   type ProductOption,
   type ProductStatus,
   type ProductVariant,
 } from "../../data/catalog";
 import { ApiError, errorMessage } from "../../lib/api";
+import { useCategories } from "../../lib/cms/categories";
 import { emptyProduct, isSlugTaken, saveProduct, useProducts, type ProductInput } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
 import { CloseIcon, PlusIcon, TrashIcon } from "./AdminIcons";
@@ -113,6 +112,7 @@ export default function ProductEditor({
   onDelete: (product: CatalogProduct) => void;
 }) {
   const { data: products } = useProducts();
+  const { data: categories } = useCategories();
   const [form, setForm] = useState<ProductInput>(() => (product ? { ...product, options: product.options.map((o) => ({ ...o, values: [...o.values] })) } : emptyProduct()));
   // A new product's slug follows its name until the admin types their own.
   const [slugTouched, setSlugTouched] = useState(product !== null);
@@ -121,6 +121,16 @@ export default function ProductEditor({
 
   const set = <K extends keyof ProductInput>(key: K, value: ProductInput[K]) => setForm((f) => ({ ...f, [key]: value }));
   const slug = slugTouched ? form.slug : slugify(form.name);
+
+  // A new product defaults to the first category once the live list has loaded (the fixed list is gone).
+  useEffect(() => {
+    if (product === null && categories.length > 0) setForm((f) => (f.category ? f : { ...f, category: categories[0].name }));
+  }, [product, categories]);
+
+  // Keeps the current value selectable even if it is not (yet, or no longer) in the live list.
+  const categoryOptions = categories.some((c) => c.name === form.category)
+    ? categories.map((c) => ({ value: c.name, label: c.name }))
+    : [...(form.category ? [{ value: form.category, label: form.category }] : []), ...categories.map((c) => ({ value: c.name, label: c.name }))];
 
   // With variants the price and the stock of the product are the cheapest combination and the sum of all of them: the
   // two fields at the top stop being typed and only show what the variants add up to (the server computes the same).
@@ -147,6 +157,7 @@ export default function ProductEditor({
     if (saving) return;
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = "The product needs a name.";
+    if (!form.category) next.category = "Choose a category.";
     if (!slug) next.slug = "The slug cannot be empty.";
     else if (isSlugTaken(products, slug, product?.id)) next.slug = "Another product already uses this slug.";
     if (!Number.isFinite(form.price) || form.price < 0) next.price = "Enter a price of 0 or more.";
@@ -234,7 +245,7 @@ export default function ProductEditor({
 
         <div className="grid grid-cols-2 gap-[16px] max-tablet:grid-cols-1">
           <Field label="Category" htmlFor="p-category" error={errors.category}>
-            <Select<Category> id="p-category" value={form.category} onChange={(v) => set("category", v)} options={CATEGORIES.map((c) => ({ value: c, label: c }))} />
+            <Select<string> id="p-category" value={form.category} onChange={(v) => set("category", v)} options={categoryOptions} />
           </Field>
           <Field label="Status" htmlFor="p-status" hint="Disabled products are hidden from the store.">
             <Select<ProductStatus>

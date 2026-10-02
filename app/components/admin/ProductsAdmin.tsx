@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { CATEGORIES, LOW_STOCK, priceRange, type CatalogProduct, type Category, type ProductStatus } from "../../data/catalog";
+import { LOW_STOCK, priceRange, type CatalogProduct, type ProductStatus } from "../../data/catalog";
 import { errorMessage } from "../../lib/api";
+import { useCategories } from "../../lib/cms/categories";
 import { deleteProducts, setProductStatus, useProducts } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
 import { EditIcon, TrashIcon } from "./AdminIcons";
@@ -19,9 +20,10 @@ const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, ""
 /** Products section: every product of the catalog in a table, with create, edit, enable/disable and delete. */
 export default function ProductsAdmin() {
   const { data: products, loading, error } = useProducts();
+  const { data: categories } = useCategories();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [category, setCategory] = useState<Category | "all">("all");
+  const [category, setCategory] = useState<string | "all">("all");
   const [selected, setSelected] = useState<(string | number)[]>([]);
   // null: closed. "new": empty form. A product: editing it.
   const [editing, setEditing] = useState<CatalogProduct | "new" | null>(null);
@@ -198,7 +200,7 @@ export default function ProductsAdmin() {
           />
         </div>
         <div className="w-[190px] max-tablet:w-[calc(50%-6px)]">
-          <Select<Category | "all"> value={category} onChange={setCategory} options={[{ value: "all", label: "All categories" }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]} />
+          <Select<string> value={category} onChange={setCategory} options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c.name, label: c.name }))]} />
         </div>
       </div>
 

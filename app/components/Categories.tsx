@@ -1,14 +1,7 @@
-import Link from "next/link";
+"use client";
 
-// Each one opens the products catalog with that category already selected.
-const categories = [
-  { label: "Iphone", category: "Iphone" },
-  { label: "Macbook", category: "Macbook" },
-  { label: "Ipad", category: "Ipad" },
-  { label: "Watch", category: "Apple Watch" },
-  { label: "AirPods", category: "AirPods" },
-  { label: "Accesories", category: "Accesories" },
-];
+import Link from "next/link";
+import { useCategories } from "../lib/categories";
 
 /**
  * One pass of the list. Above 957px it is a centred row. At 957px and below it
@@ -17,7 +10,7 @@ const categories = [
  * separator in ticker mode (the last one is hidden otherwise) so the spacing
  * stays even where the copies meet.
  */
-function Group({ duplicate = false, productsHref }: { duplicate?: boolean; productsHref: string }) {
+function Group({ names, duplicate = false, productsHref }: { names: string[]; duplicate?: boolean; productsHref: string }) {
   return (
     <ul
       aria-hidden={duplicate || undefined}
@@ -25,13 +18,13 @@ function Group({ duplicate = false, productsHref }: { duplicate?: boolean; produ
         duplicate ? "hidden" : "flex"
       }`}
     >
-      {categories.map(({ label, category }, i) => (
-        <li key={label} className="flex items-center gap-[44px]">
+      {names.map((name, i) => (
+        <li key={name} className="flex items-center gap-[44px]">
           {i > 0 && <span aria-hidden="true" className="h-[25px] w-px bg-white" />}
-          <Link href={`${productsHref}?category=${encodeURIComponent(category)}#catalog`} tabIndex={duplicate ? -1 : undefined}>
-            {label}
+          <Link href={`${productsHref}?category=${encodeURIComponent(name)}#catalog`} tabIndex={duplicate ? -1 : undefined}>
+            {name}
           </Link>
-          {i === categories.length - 1 && (
+          {i === names.length - 1 && (
             <span aria-hidden="true" className="hidden h-[25px] w-px bg-white max-[957px]:block" />
           )}
         </li>
@@ -40,14 +33,18 @@ function Group({ duplicate = false, productsHref }: { duplicate?: boolean; produ
   );
 }
 
+/** Reads the live categories from the API, not a list baked into the code (categories can be renamed or removed in the CMS). */
 export default function Categories({ loggedIn = false }: { loggedIn?: boolean }) {
+  const { data: categories } = useCategories();
+  const names = categories.map((c) => c.name);
   const productsHref = loggedIn ? "/home/products" : "/products";
+  if (names.length === 0) return null;
   return (
     <section className="flex h-[100px] items-center justify-center px-section py-[10px] max-[957px]:px-0">
       <div className="flex max-[957px]:w-full max-[957px]:overflow-hidden max-[957px]:[mask-image:linear-gradient(to_right,transparent,#000_8%,#000_92%,transparent)]">
         <div className="flex w-max motion-reduce:animate-none max-[957px]:animate-ticker">
-          <Group productsHref={productsHref} />
-          <Group duplicate productsHref={productsHref} />
+          <Group names={names} productsHref={productsHref} />
+          <Group names={names} duplicate productsHref={productsHref} />
         </div>
       </div>
     </section>

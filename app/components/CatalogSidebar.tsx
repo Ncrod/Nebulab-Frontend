@@ -3,7 +3,8 @@
 import gsap from "gsap";
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { CATEGORIES, type CatalogFilter } from "../data/catalog";
+import type { CatalogFilter } from "../data/catalog";
+import { useCategories } from "../lib/categories";
 
 const header =
   "flex w-full cursor-pointer items-center gap-[10px] overflow-clip rounded-[10px] px-[15px] py-[14px] text-left font-display text-[20px] font-medium text-white transition-colors";
@@ -25,9 +26,11 @@ export default function CatalogSidebar({
   selected: CatalogFilter;
   onSelect: (filter: CatalogFilter) => void;
 }) {
+  const { data: categories } = useCategories();
+
   // Starts closed, unless a category is already selected (arriving from a link): then its list is open so the
   // choice is visible. The panel's initial height (below) matches.
-  const [startsOpen] = useState(() => (CATEGORIES as readonly string[]).includes(selected));
+  const [startsOpen] = useState(() => selected !== "all" && selected !== "new");
   const [open, setOpen] = useState(startsOpen);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -77,8 +80,8 @@ export default function CatalogSidebar({
               {/* Vertical guide beside the subcategories, from the header down to the last one. */}
               <div aria-hidden="true" className="absolute bottom-0 left-[27px] top-[2px] w-px bg-white/[0.22]" />
               <ul className="flex flex-col gap-[12px] pl-[49px] font-display text-[20px] font-normal">
-                {CATEGORIES.map((name) => (
-                  <li key={name}>
+                {categories.map(({ id, name }) => (
+                  <li key={id}>
                     <button
                       type="button"
                       onClick={() => onSelect(name)}
@@ -101,14 +104,6 @@ export default function CatalogSidebar({
           className={`${header} ${bg(selected === "new")}`}
         >
           <CategoryLabel label="New Arrival" icon="/svg/catalog/category-tag.svg" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onSelect("Accesories")}
-          aria-pressed={selected === "Accesories"}
-          className={`${header} ${bg(selected === "Accesories")}`}
-        >
-          <CategoryLabel label="Accesories" icon="/svg/catalog/category-headphones.svg" />
         </button>
       </div>
     </aside>
