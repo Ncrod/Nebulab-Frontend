@@ -44,7 +44,7 @@ export default function ProductsAdmin() {
     {
       id: "name",
       header: "Product",
-      minWidth: 280,
+      minWidth: 240,
       sort: (p) => p.name.toLowerCase(),
       cell: (p) => (
         <div className="flex items-center gap-[12px]">
@@ -61,7 +61,7 @@ export default function ProductsAdmin() {
     {
       id: "status",
       header: "Status",
-      minWidth: 130,
+      minWidth: 120,
       sort: (p) => p.status,
       cell: (p) => (
         <span onClick={(e) => e.stopPropagation()}>
@@ -85,12 +85,12 @@ export default function ProductsAdmin() {
         </span>
       ),
     },
-    { id: "slug", header: "Slug", minWidth: 200, sort: (p) => p.slug, className: "text-[#98a2b3]", cell: (p) => p.slug },
-    { id: "category", header: "Category", minWidth: 130, sort: (p) => p.category, cell: (p) => <Badge>{p.category}</Badge> },
+    { id: "slug", header: "Slug", minWidth: 170, sort: (p) => p.slug, className: "text-[#98a2b3]", cell: (p) => p.slug },
+    { id: "category", header: "Category", minWidth: 120, sort: (p) => p.category, cell: (p) => <Badge>{p.category}</Badge> },
     {
       id: "price",
       header: "Price",
-      minWidth: 120,
+      minWidth: 110,
       sort: (p) => p.price,
       align: "right",
       // With variants the price is a range: the cheapest combination is what the store shows as "From".
@@ -102,7 +102,7 @@ export default function ProductsAdmin() {
     {
       id: "stock",
       header: "Stock",
-      minWidth: 120,
+      minWidth: 100,
       sort: (p) => p.stock,
       align: "right",
       cell: (p) =>
@@ -117,7 +117,7 @@ export default function ProductsAdmin() {
     {
       id: "options",
       header: "Attributes",
-      minWidth: 200,
+      minWidth: 170,
       className: "text-[#98a2b3]",
       cell: (p) => {
         const attributes = p.options.map((o) => `${o.name} (${o.values.length})`).join(" · ");
@@ -136,11 +136,11 @@ export default function ProductsAdmin() {
         );
       },
     },
-    { id: "updated", header: "Updated", minWidth: 130, sort: (p) => p.updatedAt, className: "whitespace-nowrap text-[#98a2b3]", cell: (p) => formatDate(p.updatedAt) },
+    { id: "updated", header: "Updated", minWidth: 110, sort: (p) => p.updatedAt, className: "whitespace-nowrap text-[#98a2b3]", cell: (p) => formatDate(p.updatedAt) },
     {
       id: "actions",
       header: "",
-      minWidth: 96,
+      minWidth: 90,
       cell: (p) => (
         <span className="flex justify-end gap-[2px]" onClick={(e) => e.stopPropagation()}>
           <button type="button" aria-label={`Edit ${p.name}`} onClick={() => setEditing(p)} className={iconBtn}>

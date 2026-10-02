@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useState, useSyncExternalStore } from "react
 import { errorMessage, onSessionCleared, type SessionKind } from "./api";
 
 // Two small helpers to read API data in components:
-//  - createResource: a list or object loaded once and shared (the CMS tables, the cart). Mutations update the cached copy.
+//  - createResource: a list or object shared across consumers (the CMS tables, the cart), refetched on each mount. Mutations update the cached copy right away.
 //  - useQuery: a request that depends on parameters (catalog page, filtered sales, dashboard period) and runs again when they change.
 
 export interface ResourceState<T> {
@@ -15,7 +15,7 @@ export interface ResourceState<T> {
 }
 
 export interface Resource<T> {
-  /** The data, live. Loads it the first time a component uses it. */
+  /** The data, live. Refetches every time a component mounts it. */
   use: () => ResourceState<T>;
   /** Replaces the cached data (after a mutation whose response already has the new version). */
   set: (data: T) => void;
@@ -31,8 +31,9 @@ export function createResource<T>(load: () => Promise<T>, empty: T, owner?: Sess
   const initial: ResourceState<T> = { data: empty, loading: true, error: null };
   const server: ResourceState<T> = initial;
   let state = initial;
-  let started = false;
   let run = 0;
+  // Dedupes concurrent calls (e.g. two consumers mounting on the same page): they share one in-flight fetch.
+  let pending: Promise<void> | null = null;
   const listeners = new Set<() => void>();
 
   function commit(next: ResourceState<T>) {
@@ -40,20 +41,24 @@ export function createResource<T>(load: () => Promise<T>, empty: T, owner?: Sess
     listeners.forEach((listener) => listener());
   }
 
-  async function refresh() {
+  function refresh(): Promise<void> {
+    if (pending) return pending;
     const mine = ++run;
-    started = true;
-    try {
-      const data = await load();
-      if (mine === run) commit({ data, loading: false, error: null });
-    } catch (error) {
-      if (mine === run) commit({ ...state, loading: false, error: errorMessage(error) });
-    }
+    pending = (async () => {
+      try {
+        const data = await load();
+        if (mine === run) commit({ data, loading: false, error: null });
+      } catch (error) {
+        if (mine === run) commit({ ...state, loading: false, error: errorMessage(error) });
+      } finally {
+        pending = null;
+      }
+    })();
+    return pending;
   }
 
   function invalidate() {
     run++; // an answer still on its way belongs to the old data
-    started = false;
     commit(initial);
   }
 
@@ -69,8 +74,10 @@ export function createResource<T>(load: () => Promise<T>, empty: T, owner?: Sess
   return {
     use() {
       const current = useSyncExternalStore(subscribe, () => state, () => server);
+      // Refetches on every mount, so switching to a CMS section always shows the latest data
+      // (e.g. a customer who signed up, or an admin created elsewhere, without a full page reload).
       useEffect(() => {
-        if (!started) void refresh();
+        void refresh();
       }, []);
       return current;
     },
