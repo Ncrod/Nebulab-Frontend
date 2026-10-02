@@ -12,6 +12,13 @@ const fade = "bg-[linear-gradient(to_bottom,#fff_6.335%,#050505_99.97%)] bg-clip
  * Account page, section 2 (Figma 166:1435): the greeting with the user's name, the sign-out button and the glowing
  * horizon at the bottom.
  */
+/** Long names shrink (and tighten their line height) so they don't blow past the width of the greeting. */
+function nameSizeCls(name: string) {
+  if (name.length > 24) return "text-[76px] leading-[1.05] max-notebook:text-[52px] max-tablet:text-[34px]";
+  if (name.length > 16) return "text-[100px] leading-[1.1] max-notebook:text-[68px] max-tablet:text-[42px]";
+  return "text-[128px] leading-normal max-notebook:text-[84px] max-tablet:text-[52px]";
+}
+
 export default function AccountGreeting() {
   const name = useSession("customer")?.user.name ?? "";
 
@@ -64,7 +71,7 @@ export default function AccountGreeting() {
 
       <h1 className="relative flex w-full max-w-[1446px] flex-col items-center gap-[2px] text-center font-display font-medium leading-normal [word-break:break-word]">
         <span className={`${fade} block w-full text-[90px] max-notebook:text-[60px] max-tablet:text-[40px]`}>Hello</span>
-        <span className={`${fade} block w-full text-[128px] max-notebook:text-[84px] max-tablet:text-[52px]`}>{name}</span>
+        <span className={`${fade} block w-full ${nameSizeCls(name)}`}>{name}</span>
       </h1>
 
       <Link
