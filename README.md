@@ -1,2 +1,66 @@
 # Nebulab-Frontend
-Nebulab Apple Store Frontend
+
+Tienda en línea modular de productos Apple. Frontend de **Nebulab**, construido en Next.js 16 (App Router), React 19, TypeScript y Tailwind CSS 4, con animaciones GSAP/Lenis y efectos WebGL (shaders). Consume la API REST del backend ([NebuBack](https://github.com/), Django + DRF) para catálogo, carrito, checkout, cuenta de usuario y panel de administración.
+
+Desplegado en Vercel: https://nebulab-frontend.vercel.app/
+Dominio: https://nebulab.digital
+
+## Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
+- **Estilos**: Tailwind CSS 4, variables CSS para tema oscuro, 4 breakpoints (móvil 320px, tablet 768px, notebook 1140px, desktop 1440px)
+- **Animación**: GSAP + Lenis (scroll suave), WebGL/shaders para efectos visuales
+- **Tipografías**: SF Pro Display y Neue Montreal (cargadas localmente en `app/fonts/`)
+- **Gestor de paquetes**: pnpm
+- **Lint**: ESLint
+
+## Estructura
+
+```
+app/
+  home/              # Inicio (/) — portada, shaders, categorías, destacados
+  products/[slug]/   # Catálogo y detalle de producto
+  bag/               # Bolsa y checkout (envío + pago simulado)
+  account/           # Cuenta de usuario
+  login/, login-admin/   # Autenticación (clientes y admins)
+  reset-password/    # Recuperación de contraseña
+  admin/             # Panel de administración
+    products/ customers/ orders/ admins/ categories/
+  components/        # Componentes de UI (incluye components/admin, components/login)
+  lib/                # Cliente HTTP, auth, recursos de la API
+    api.ts            # Cliente HTTP base (NEXT_PUBLIC_API_URL + tokens JWT)
+    auth.ts            # Manejo de sesión/tokens
+    cart.ts             # Carrito (API)
+    categories.ts        # Categorías (API)
+    cms/                 # products, customers, orders, admin-auth, metrics (API)
+    resource.ts, server-api.ts, session-routes.ts
+  data/               # Tipos y datos estáticos restantes
+  fonts/              # Fuentes locales
+```
+
+## Backend
+
+El frontend es un proyecto independiente que se comunica solo por API REST en JSON con el backend (Django + DRF + PostgreSQL/Neon). Todos los módulos de datos (`app/lib/cart.ts`, `app/lib/cms/*`, login) ya consumen la API real — no hay datos simulados.
+
+Variable de entorno requerida (`.env.local`):
+
+```
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+## Desarrollo
+
+```bash
+pnpm install
+pnpm dev      # http://localhost:3000
+pnpm build
+pnpm start
+pnpm lint
+```
+
+Requiere el backend corriendo (local o remoto) y accesible en `NEXT_PUBLIC_API_URL`.
+
+## Pendiente
+
+- Cobertura completa de estados de carga/error
+- Pruebas de extremo a extremo
