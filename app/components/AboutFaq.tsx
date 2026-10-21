@@ -80,9 +80,9 @@ export default function AboutFaq() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="relative z-10 flex w-full justify-center px-section pb-[120px] pt-[119px] max-notebook:pb-[90px] max-notebook:pt-[80px] max-tablet:pb-[60px] max-tablet:pt-[50px]">
-      <div className="flex w-full max-w-[1264px] flex-col items-center gap-[60px] notebook:flex-row notebook:items-start notebook:justify-between notebook:gap-[146px] max-tablet:gap-[40px]">
-        <div className="flex w-full flex-col items-start justify-center gap-[18px] max-notebook:max-w-[566px] notebook:w-[552px] notebook:shrink-0">
+    <section className="relative z-10 flex w-full justify-center px-section pb-[120px] pt-[119px] max-notebook:pb-[90px] max-notebook:pt-[80px] max-tablet:pb-[100px] max-tablet:pt-[50px]">
+      <div className="flex w-full max-w-[1264px] flex-col items-center gap-[60px] notebook:flex-row notebook:items-start notebook:justify-between notebook:gap-[146px] max-desktop:notebook:gap-[60px] max-tablet:gap-[40px]">
+        <div className="flex w-full flex-col items-start justify-center gap-[18px] max-notebook:max-w-[566px] max-tablet:max-w-[527px] max-notebook:items-center max-notebook:text-center notebook:min-w-0 notebook:max-w-[552px] notebook:flex-1">
           <div
             className="relative flex h-[38px] items-center rounded-[100px] border border-white/10 px-[20px] py-[6px] backdrop-blur-[1.25px]"
             style={{ backgroundImage: "linear-gradient(0.13deg, rgba(84,84,84,0.33) 0%, rgba(54,54,54,0.1) 100%)" }}
@@ -101,12 +101,12 @@ export default function AboutFaq() {
           >
             Any questions? Here are the answers you&apos;re looking for
           </h2>
-          <p className="font-sans text-[24px] leading-[1.48] text-[#a0a0a0] max-tablet:text-[18px]">
+          <p className="font-sans text-[24px] leading-[1.48] text-[#a0a0a0] max-desktop:text-[20px] max-tablet:text-[18px]">
             Everything you need to know before getting started. Can&apos;t find what you&apos;re looking for? Reach out and we&apos;ll be happy to help.
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-[14px] max-notebook:max-w-[566px] notebook:w-[566px] notebook:shrink-0">
+        <div className="flex w-full flex-col gap-[14px] max-notebook:max-w-[566px] notebook:min-w-0 notebook:max-w-[566px] notebook:flex-1">
           {FAQS.map(({ question, answer }, i) => (
             <FaqItem
               key={question}

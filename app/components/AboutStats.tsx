@@ -12,8 +12,8 @@ const STATS = [
 /** About us page, second section (Figma 331:7): call to action and animated numbers. */
 export default function AboutStats({ loggedIn = false }: { loggedIn?: boolean }) {
   return (
-    <section className="relative z-10 flex w-full justify-center px-section pb-[137px] pt-[66px] max-notebook:pb-[90px] max-tablet:pb-[60px] max-tablet:pt-[40px]">
-      <div className="flex w-full max-w-[1134px] flex-col items-center gap-[60px] notebook:flex-row notebook:gap-[75px] max-tablet:gap-[40px]">
+    <section className="relative z-10 flex w-full justify-center px-section pb-[220px] pt-[140px] max-notebook:pb-[140px] max-notebook:pt-[100px] max-tablet:pb-[90px] max-tablet:pt-[60px]">
+      <div className="flex w-full max-w-[1134px] flex-col items-center gap-[150px] notebook:flex-row notebook:gap-[75px] max-tablet:gap-[110px]">
         <div className="flex w-full flex-col items-start gap-[40px] max-notebook:max-w-[560px] max-notebook:items-center max-notebook:text-center notebook:w-[507px] notebook:shrink-0">
           <div className="flex w-full flex-col gap-[16px] max-notebook:items-center">
             <h2 className="font-display text-[64px] font-medium leading-[normal] text-white max-desktop:text-[48px] max-tablet:text-[36px]">
