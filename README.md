@@ -59,6 +59,7 @@ pnpm lint
 ```
 
 Requiere el backend corriendo (local o remoto) y accesible en `NEXT_PUBLIC_API_URL`.
+El optimizador de imágenes solo acepta el host HTTPS de la API. Si las fotos del catálogo se alojan en un CDN, configura `NEXT_PUBLIC_IMAGE_HOSTS` con sus nombres de host HTTPS separados por comas antes del despliegue (por ejemplo, `NEXT_PUBLIC_IMAGE_HOSTS=cdn.ejemplo.com`).
 
 ## Pendiente
 

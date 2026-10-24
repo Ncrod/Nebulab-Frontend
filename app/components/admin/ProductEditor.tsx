@@ -14,6 +14,7 @@ import {
   type ProductVariant,
 } from "../../data/catalog";
 import { ApiError, errorMessage } from "../../lib/api";
+import { isUsableImage } from "../../lib/image-policy";
 import { useCategories } from "../../lib/cms/categories";
 import { emptyProduct, isSlugTaken, saveProduct, useProducts, type ProductInput } from "../../lib/cms/products";
 import { showToast } from "../../lib/toast";
@@ -24,16 +25,6 @@ import { btnDanger, btnGhost, btnPrimary, Drawer, Field, iconBtn, inputCls, Sele
 const FORM_FIELDS = ["name", "slug", "category", "price", "stock", "image", "options", "variants"];
 
 const PLACEHOLDER_IMAGE = "/images/catalog/airpods-pro-2.png";
-
-/** The shop draws products with next/image: an https URL (any host is allowed in next.config.ts) or a path of this site. */
-function isUsableImage(src: string) {
-  if (/^\/(?!\/)/.test(src)) return true;
-  try {
-    return new URL(src).protocol === "https:";
-  } catch {
-    return false;
-  }
-}
 
 /** Values of an attribute as removable chips; Enter or comma adds the typed one. */
 function ChipInput({ values, onChange, label }: { values: string[]; onChange: (values: string[]) => void; label: string }) {
@@ -162,7 +153,7 @@ export default function ProductEditor({
     else if (isSlugTaken(products, slug, product?.id)) next.slug = "Another product already uses this slug.";
     if (!Number.isFinite(form.price) || form.price < 0) next.price = "Enter a price of 0 or more.";
     if (!Number.isInteger(form.stock) || form.stock < 0) next.stock = "Stock must be a whole number, 0 or more.";
-    if (!isUsableImage(form.image)) next.image = "Enter an image URL starting with https:// (or a path of this site, like /images/catalog/photo.png).";
+    if (!isUsableImage(form.image)) next.image = "Use an HTTPS image from a trusted host, or a local /images/ or /svg/ path.";
     if (form.options.some((o) => !o.name.trim() || o.values.length === 0)) next.options = "Every attribute needs a name and at least one value.";
     if (form.variants.some((v) => !Number.isFinite(v.price) || v.price < 0)) next.variants = "Every combination needs a price of 0 or more.";
     else if (form.variants.some((v) => !Number.isInteger(v.stock) || v.stock < 0)) next.variants = "The stock of a combination must be a whole number, 0 or more.";

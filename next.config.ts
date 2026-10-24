@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
+import { imageHosts } from "./app/lib/image-policy";
 
 const nextConfig: NextConfig = {
   images: {
     // Next 16 only serves the qualities listed here. 75 is the default; 90 is for product photos.
     qualities: [75, 90],
-    // Product photos are set in the CMS as URLs, so any https host is allowed. Once the backend serves them from
-    // one place (a bucket, a CDN), list only that host here.
-    remotePatterns: [{ protocol: "https", hostname: "**" }],
+    remotePatterns: imageHosts.map((hostname) => ({ protocol: "https" as const, hostname, port: "", pathname: "/**" })),
+    maximumRedirects: 0,
+    localPatterns: [{ pathname: "/images/**", search: "" }, { pathname: "/svg/**", search: "" }],
   },
   async headers() {
     return [
@@ -19,6 +20,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           // Sends the full URL only to this site's own origin; other sites only get the origin, not the full path.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
         ],
       },
     ];
