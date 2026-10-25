@@ -1,6 +1,7 @@
+import { apiUrl } from "./api-url";
+
 // Only these HTTPS hosts may supply images to Next's server-side optimizer.
 // Add trusted asset hosts with NEXT_PUBLIC_IMAGE_HOSTS (comma-separated hostnames).
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://nebuback.onrender.com/api";
 const apiHost = (() => {
   try {
     const url = new URL(apiUrl);

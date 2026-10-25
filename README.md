@@ -45,7 +45,7 @@ El frontend es un proyecto independiente que se comunica solo por API REST en JS
 Variable de entorno requerida (`.env.local`):
 
 ```
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_API_URL=https://api.nebulab.digital/api
 ```
 
 ## Desarrollo
@@ -58,7 +58,8 @@ pnpm start
 pnpm lint
 ```
 
-Requiere el backend corriendo (local o remoto) y accesible en `NEXT_PUBLIC_API_URL`.
+Requiere el backend corriendo (local o remoto) y accesible en `NEXT_PUBLIC_API_URL`. Si Vercel conserva temporalmente `https://nebuback.onrender.com/api`, el código usa `https://api.nebulab.digital/api` para que la autenticación por cookies funcione; actualiza también la variable en Vercel cuando tengas acceso al proyecto.
+Para probar la autenticación antes del despliegue, ejecuta la rama `feature/refresh-en-cookie` del backend y usa `NEXT_PUBLIC_API_URL=http://localhost:8000/api` con el frontend en `http://localhost:3000`. El backend debe permitir ese origen y configurar la cookie para el entorno local. El acceso y el usuario se mantienen solo en memoria; la cookie de renovación es `HttpOnly`. El despliegue del frontend y del backend debe coordinarse porque sus contratos de login son incompatibles con las versiones anteriores.
 El optimizador de imágenes solo acepta el host HTTPS de la API. Si las fotos del catálogo se alojan en un CDN, configura `NEXT_PUBLIC_IMAGE_HOSTS` con sus nombres de host HTTPS separados por comas antes del despliegue (por ejemplo, `NEXT_PUBLIC_IMAGE_HOSTS=cdn.ejemplo.com`).
 
 ## Pendiente

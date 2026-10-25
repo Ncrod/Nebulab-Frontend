@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { clearLegacyData, useSession } from "../lib/api";
+import { initializeSessions, useSession } from "../lib/api";
 import { isSignedInPath, signedInTwin } from "../lib/session-routes";
 
 /**
@@ -17,9 +17,9 @@ export default function SessionGate({ children }: { children: ReactNode }) {
   const session = useSession("customer");
   const needsSession = isSignedInPath(pathname);
 
-  // The mock version of the site kept its data in this browser: it is not used anymore.
+  // Restore both cookie-backed sessions once, and delete legacy token storage.
   useEffect(() => {
-    clearLegacyData();
+    initializeSessions();
   }, []);
 
   useEffect(() => {

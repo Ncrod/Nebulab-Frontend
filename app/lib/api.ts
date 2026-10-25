@@ -1,12 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { apiUrl } from "./api-url";
+import { showToast } from "./toast";
 
-// The one HTTP client of the site. It adds the token, renews it when it expires and sends the user to the login when the
-// session is lost. There are two independent sessions: the shopper's ("nebulab-session") and the CMS admin's
-// ("nebulab-admin-session", used under /admin).
+// The two sessions are kept in memory. The browser holds their separate, HttpOnly refresh cookies.
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "https://nebuback.onrender.com/api";
+const API = apiUrl;
 
 export type SessionKind = "customer" | "admin";
 
@@ -19,52 +19,24 @@ export interface SessionUser {
 
 export interface Session {
   access: string;
-  refresh: string;
   user: SessionUser;
 }
 
 const KEY: Record<SessionKind, string> = { customer: "nebulab-session", admin: "nebulab-admin-session" };
 const LOGIN: Record<SessionKind, string> = { customer: "/login", admin: "/login-admin" };
 
-// Data of the mock era that older visits left in the browser. The API owns all of it now.
-const LEGACY_KEYS = ["nebulab-cart", "nebulab-cms-products-v2", "nebulab-cms-customers", "nebulab-cms-orders-v2", "nebulab-cms-admins"];
+const LEGACY_KEYS = [...Object.values(KEY), "nebulab-cart", "nebulab-cms-products-v2", "nebulab-cms-customers", "nebulab-cms-orders-v2", "nebulab-cms-admins"];
 
 // ── Session storage ───────────────────────────────────────────────────────────
 
 const listeners = new Set<() => void>();
-const cache: Record<SessionKind, { raw: string | null; session: Session | null }> = {
-  customer: { raw: null, session: null },
-  admin: { raw: null, session: null },
-};
-// Only used when the storage is blocked (private window, site data off): the session then lasts until the tab closes.
-const memory: Partial<Record<SessionKind, Session | null>> = {};
-
-function isSession(value: unknown): value is Session {
-  const session = value as Session | null;
-  return !!session && typeof session.access === "string" && typeof session.refresh === "string" && !!session.user;
-}
+const memory: Record<SessionKind, Session | null | undefined> = { customer: undefined, admin: undefined };
+const version: Record<SessionKind, number> = { customer: 0, admin: 0 };
+const bootstrapping: Partial<Record<SessionKind, Promise<void>>> = {};
+let channel: BroadcastChannel | null = null;
 
 export function readSession(kind: SessionKind): Session | null {
-  if (kind in memory) return memory[kind] ?? null;
-  let raw: string | null = null;
-  try {
-    raw = window.localStorage.getItem(KEY[kind]);
-  } catch {
-    return null;
-  }
-  // useSyncExternalStore compares snapshots by identity: parse only when the stored text changed.
-  if (cache[kind].raw === raw && (raw === null || cache[kind].session)) return cache[kind].session;
-  let session: Session | null = null;
-  if (raw) {
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      session = isSession(parsed) ? parsed : null; // an old mock session has no token: it is not a session
-    } catch {
-      session = null;
-    }
-  }
-  cache[kind] = { raw, session };
-  return session;
+  return memory[kind] ?? null;
 }
 
 function emit() {
@@ -72,12 +44,8 @@ function emit() {
 }
 
 export function saveSession(kind: SessionKind, session: Session) {
-  try {
-    window.localStorage.setItem(KEY[kind], JSON.stringify(session));
-    delete memory[kind];
-  } catch {
-    memory[kind] = session;
-  }
+  version[kind]++;
+  memory[kind] = session;
   emit();
 }
 
@@ -88,27 +56,18 @@ export function onSessionCleared(handler: (kind: SessionKind) => void) {
   clearHandlers.add(handler);
 }
 
-export function clearSessionLocal(kind: SessionKind) {
-  try {
-    window.localStorage.removeItem(KEY[kind]);
-    delete memory[kind];
-  } catch {
-    memory[kind] = null;
-  }
-  cache[kind] = { raw: null, session: null };
+export function clearSessionLocal(kind: SessionKind, broadcast = false) {
+  version[kind]++;
+  memory[kind] = null;
   clearHandlers.forEach((handler) => handler(kind));
   emit();
+  if (broadcast) channel?.postMessage({ type: "logout", kind });
 }
 
 function subscribe(onChange: () => void) {
   listeners.add(onChange);
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null || Object.values(KEY).includes(event.key)) onChange(); // another tab signed in or out
-  };
-  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener("storage", onStorage);
   };
 }
 
@@ -116,7 +75,7 @@ function subscribe(onChange: () => void) {
 export function useSession(kind: SessionKind): Session | null | undefined {
   return useSyncExternalStore(
     subscribe,
-    () => readSession(kind),
+    () => memory[kind],
     () => undefined,
   );
 }
@@ -127,6 +86,31 @@ export function clearLegacyData() {
     LEGACY_KEYS.forEach((key) => window.localStorage.removeItem(key));
   } catch {
     // storage blocked: nothing to clear
+  }
+}
+
+/** Called once by the root client gate. Each kind is restored independently. */
+export function initializeSessions(): void {
+  clearLegacyData();
+  if (!channel && typeof BroadcastChannel !== "undefined") {
+    channel = new BroadcastChannel("nebulab-auth");
+    channel.onmessage = (event: MessageEvent<{ type: string; kind: SessionKind }>) => {
+      if (event.data?.type === "logout" && (event.data.kind === "customer" || event.data.kind === "admin")) {
+        clearSessionLocal(event.data.kind);
+      }
+    };
+  }
+  for (const kind of ["customer", "admin"] as const) {
+    if (memory[kind] !== undefined || bootstrapping[kind]) continue;
+    const initialVersion = version[kind];
+    bootstrapping[kind] = renew(kind).then(
+      () => { if (memory[kind] === undefined && version[kind] === initialVersion) clearSessionLocal(kind); },
+      (error) => {
+        if (memory[kind] === undefined && version[kind] === initialVersion) clearSessionLocal(kind);
+        if (error instanceof ApiError && error.status === 403) showToast(errorMessage(error));
+        console.error(`Could not restore ${kind} session:`, error);
+      },
+    ).finally(() => { delete bootstrapping[kind]; });
   }
 }
 
@@ -175,25 +159,33 @@ export function errorMessage(error: unknown): string {
 
 const renewing: Partial<Record<SessionKind, Promise<boolean>>> = {};
 
+async function withRefreshLock<T>(kind: SessionKind, task: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== "undefined" && navigator.locks) {
+    return await navigator.locks.request<Promise<T>>(`nebulab-refresh-${kind}`, task);
+  }
+  return task();
+}
+
 function renew(kind: SessionKind): Promise<boolean> {
-  const session = readSession(kind);
-  if (!session) return Promise.resolve(false);
-  renewing[kind] ??= fetch(`${API}/auth/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh: session.refresh }),
-  })
-    .then(async (response) => {
-      if (!response.ok) return false;
-      const { access, refresh } = (await response.json()) as { access: string; refresh: string };
-      saveSession(kind, { ...session, access, refresh });
-      return true;
-    })
-    .catch(() => false)
-    .finally(() => {
-      delete renewing[kind];
+  if (renewing[kind]) return renewing[kind];
+  const initialVersion = version[kind];
+  const promise = withRefreshLock(kind, async () => {
+    // The cookie may have rotated in another tab while this request waited for the lock.
+    const response = await fetch(`${API}/auth/refresh/`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind }),
     });
-  return renewing[kind]!;
+    if (response.status === 401) return false;
+    const data: unknown = await response.json().catch(() => null);
+    if (!response.ok) throw new ApiError(response.status, data);
+    const session = data as Session;
+    if (version[kind] === initialVersion) saveSession(kind, session);
+    return !!memory[kind];
+  }).finally(() => { delete renewing[kind]; });
+  renewing[kind] = promise;
+  return promise;
 }
 
 type Options = Omit<RequestInit, "body"> & { session?: SessionKind; body?: unknown };
@@ -215,9 +207,15 @@ export async function api<T = unknown>(path: string, options: Options = {}, retr
     },
   });
   if (response.status === 401 && kind && token) {
-    if (retry && (await renew(kind))) return api<T>(path, options, false);
-    clearSessionLocal(kind);
-    window.location.href = LOGIN[kind];
+    // Another request may already have installed a new access token.
+    const current = readSession(kind);
+    if (retry && current && (current.access !== token || (await renew(kind)))) {
+      return api<T>(path, options, false);
+    }
+    if (readSession(kind)?.access === token) {
+      clearSessionLocal(kind, true);
+      window.location.href = LOGIN[kind];
+    }
   }
   if (response.status === 204) return undefined as T;
   const data: unknown = await response.json().catch(() => null);
@@ -245,8 +243,8 @@ export async function apiAll<T>(path: string, options: Options = {}): Promise<T[
 }
 
 /** Signs in with the API. Returns the session; throws ApiError (401 "Wrong email or password.") when it is refused. */
-export async function login(email: string, password: string): Promise<Session> {
-  return api<Session>("/auth/login/", { method: "POST", body: { email, password } });
+export async function login(email: string, password: string, kind: SessionKind): Promise<Session> {
+  return api<Session>("/auth/login/", { method: "POST", credentials: "include", body: { email, password, kind } });
 }
 
 /**
@@ -254,18 +252,17 @@ export async function login(email: string, password: string): Promise<Session> {
  * The returned promise is for the server part; nobody has to wait for it.
  */
 export function logout(kind: SessionKind): Promise<void> {
-  const session = readSession(kind);
-  clearSessionLocal(kind);
-  if (!session) return Promise.resolve();
-  // The token goes by hand (not `session`) so an expired one does not bounce the user to the login page. `keepalive` lets the
-  // request finish even if the page is being left.
-  return api("/auth/logout/", {
+  clearSessionLocal(kind, true);
+  return withRefreshLock(kind, () => api("/auth/logout/", {
     method: "POST",
+    credentials: "include",
     keepalive: true,
-    headers: { Authorization: `Bearer ${session.access}` },
-    body: { refresh: session.refresh },
-  }).then(
+    body: { kind },
+  })).then(
     () => undefined,
-    () => undefined,
+    (error) => {
+      if (error instanceof ApiError && error.status === 403) showToast(errorMessage(error));
+      console.error(`Could not revoke ${kind} session:`, error);
+    },
   );
 }

@@ -1,6 +1,7 @@
 import type { CatalogProduct } from "../data/catalog";
+import { apiUrl } from "./api-url";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "https://nebuback.onrender.com/api";
+const API = apiUrl;
 
 /**
  * A live product, read on the server (only for the page title). It gives up after a few seconds and answers null: the API may be

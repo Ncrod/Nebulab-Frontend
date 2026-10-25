@@ -5,7 +5,7 @@ import { createResource } from "../resource";
 import { normalizeEmail } from "./customers";
 import type { AdminUser } from "./types";
 
-// CMS accounts and login, against the API. Passwords are checked by the server; the browser only keeps the session tokens.
+// CMS accounts and login, against the API. Access and user live only in memory.
 
 const admins = createResource(() => apiAll<AdminUser>("/admin/admins/", { session: "admin" }), [] as AdminUser[], "admin");
 
@@ -17,12 +17,7 @@ export const MIN_PASSWORD = 8;
  */
 export async function signInAdmin(email: string, password: string): Promise<SessionUser | null> {
   try {
-    const session = await login(email, password);
-    if (session.user.role !== "admin") {
-      // A shopper's tokens are of no use here: close them on the server too.
-      await api("/auth/logout/", { method: "POST", headers: { Authorization: `Bearer ${session.access}` }, body: { refresh: session.refresh } }).catch(() => {});
-      return null;
-    }
+    const session = await login(email, password, "admin");
     saveSession("admin", session);
     return session.user;
   } catch (error) {
